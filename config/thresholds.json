@@ -1,0 +1,5 @@
+{
+  "understandMaxTurns": 6,
+  "lengthCaps": { "understand": 400, "recommend": 700, "close": 300 },
+  "historyWindow": 6
+}

@@ -1,0 +1,31 @@
+{
+  "exclusions": [
+    { "id": "ex-killing-me", "pattern": "\\b(?:deadline|work|job|exam|traffic|heat|boss|this|it|that)\\b[^.!?\\n]{0,20}\\bkilling me\\b" },
+    { "id": "ex-dying-laugh", "pattern": "\\bdying (?:of|from) (?:laughter|laughing|embarrassment|boredom)\\b" },
+    { "id": "ex-hasi", "pattern": "\\bmar (?:jaunga|jaungi|jaenge|jayenge) hasi se\\b|\\bhas(?:te|ke) has(?:te|ke) mar\\b" },
+    { "id": "ex-kill-it", "pattern": "\\b(?:kill|killed|killing) (?:it|the (?:interview|exam|presentation|game))\\b" }
+  ],
+  "patterns": [
+    { "id": "im-kill-myself", "lang": "en", "tier": "imminent", "pattern": "\\b(?:kill|killing|hang|hanging) myself\\b" },
+    { "id": "im-end-life", "lang": "en", "tier": "imminent", "pattern": "\\b(?:end|ending|take|taking) my (?:own )?life\\b" },
+    { "id": "im-suicide", "lang": "en", "tier": "imminent", "pattern": "\\b(?:suicide|suicidal)\\b" },
+    { "id": "im-want-die", "lang": "en", "tier": "imminent", "pattern": "\\b(?:i )?(?:want|wanna|going|plan|planning) to die\\b" },
+    { "id": "im-overdose", "lang": "en", "tier": "imminent", "pattern": "\\b(?:overdose|od on|swallow (?:all|the) (?:pills|tablets))\\b" },
+    { "id": "im-jump", "lang": "en", "tier": "imminent", "pattern": "\\bjump (?:off|from) (?:the |a |my )?(?:roof|bridge|building|terrace|balcony)\\b" },
+    { "id": "im-goodbye", "lang": "en", "tier": "imminent", "pattern": "\\b(?:this is (?:my )?goodbye|won'?t be (?:here|around) (?:tomorrow|much longer))\\b" },
+    { "id": "im-kill-other", "lang": "en", "tier": "imminent", "pattern": "\\b(?:going to|gonna|will|want to) (?:kill|stab|shoot) (?:him|her|them|my \\w+)\\b" },
+    { "id": "im-hi-marna", "lang": "hi", "tier": "imminent", "pattern": "\\b(?:marna|mar jana) (?:chahta|chahti|hai|hoon|hun)\\b|\\bmar jaana chahta\\b|\\bmar jaana chahti\\b" },
+    { "id": "im-hi-khud", "lang": "hi", "tier": "imminent", "pattern": "\\bkhud ko (?:maar|khatam|maarna|khatam karna)\\b" },
+    { "id": "im-hi-jeena", "lang": "hi", "tier": "imminent", "pattern": "\\bjeena nahi(?:n)? (?:chahta|chahti)\\b|\\bjeene ka (?:mann|man) nahi\\b" },
+    { "id": "im-hi-aatmhatya", "lang": "hi", "tier": "imminent", "pattern": "\\b(?:aatmhatya|atmahatya|aatmahatya|suicide kar)\\b" },
+    { "id": "im-hi-zindagi", "lang": "hi", "tier": "imminent", "pattern": "\\bzindagi khatam (?:kar|karna|kar dunga|kar dungi)\\b" },
+    { "id": "el-disappear", "lang": "en", "tier": "elevated", "pattern": "\\b(?:want to|wish i could) (?:disappear|not wake up|not exist|sleep forever)\\b" },
+    { "id": "el-better-off", "lang": "en", "tier": "elevated", "pattern": "\\b(?:better off without me|no (?:point|reason) (?:in )?(?:living|going on|to live))\\b" },
+    { "id": "el-self-harm", "lang": "en", "tier": "elevated", "pattern": "\\b(?:hurt|hurting|harm|harming|cut|cutting) myself\\b|\\bself[- ]harm\\b" },
+    { "id": "el-hi-sab-khatam", "lang": "hi", "tier": "elevated", "pattern": "\\bsab khatam kar (?:du|doon|dunga|dungi)\\b|\\bkoi fayda nahi(?:n)? jeene\\b" },
+    { "id": "el-hi-gayab", "lang": "hi", "tier": "elevated", "pattern": "\\bgayab ho jaana chah(?:ta|ti)\\b" },
+    { "id": "bh-hits-me", "lang": "en", "tier": "elevated", "beingHarmed": true, "pattern": "\\b(?:he|she|they|my (?:husband|wife|partner|father|dad|mother|mom|brother|boyfriend|girlfriend)) (?:hits|beats|slaps|chokes|threatens|hurts) me\\b" },
+    { "id": "bh-not-safe", "lang": "en", "tier": "elevated", "beingHarmed": true, "pattern": "\\bnot safe (?:at home|here|with him|with her)\\b|\\bafraid (?:to go|of going) home\\b" },
+    { "id": "bh-hi-maarta", "lang": "hi", "tier": "elevated", "beingHarmed": true, "pattern": "\\bmujhe (?:maarta|maarti|maarte|peet(?:ta|ti|te)) (?:hai|hain)\\b|\\bghar (?:mein|me) safe nahi\\b" }
+  ]
+}

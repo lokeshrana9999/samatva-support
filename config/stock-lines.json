@@ -1,0 +1,56 @@
+{
+  "handoffSentence": {
+    "en-IN": "What you've shared sounds serious, and you deserve to talk to a person right now. Please call one of these.",
+    "hi-Latn": "Aapne jo bataya woh serious lagta hai. Abhi kisi insaan se baat karna zaroori hai. Please inme se kisi ek ko call karein."
+  },
+  "handoffFollowUp": {
+    "en-IN": "Are you safe right now?",
+    "hi-Latn": "Kya aap abhi safe hain?"
+  },
+  "byReason": {
+    "diagnosis": {
+      "en-IN": "I can't diagnose, but I can help you find someone who can.",
+      "hi-Latn": "Yahan diagnosis nahi diya ja sakta, par aise expert tak pahunchne mein madad ho sakti hai jo de sakein."
+    },
+    "medical": {
+      "en-IN": "I can't advise on medicines or doses. A psychiatrist or doctor can, and I can help you find one.",
+      "hi-Latn": "Dawaiyon ya dose par yahan salah nahi di ja sakti. Psychiatrist ya doctor yeh bata sakte hain, aur unhe dhoondhne mein madad ho sakti hai."
+    },
+    "claims_human": {
+      "en-IN": "I'm an AI assistant, not a person.",
+      "hi-Latn": "Yeh ek AI assistant hai, koi insaan nahi."
+    }
+  },
+  "byStage": {
+    "understand": {
+      "en-IN": "I'd like to understand a bit more before suggesting anything. What's been weighing on you most?",
+      "hi-Latn": "Kuch suggest karne se pehle thoda aur samajhna hai. Sabse zyada kya pareshan kar raha hai?"
+    },
+    "recommend": {
+      "en-IN": "Here are some kinds of help that may fit, based on what you've shared.",
+      "hi-Latn": "Aapne jo bataya uske hisaab se, yeh kuch tarah ki madad fit ho sakti hai."
+    },
+    "close": {
+      "en-IN": "Take your time with these. You can open any of them, or delete this conversation below.",
+      "hi-Latn": "Aaram se dekhiye. Inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain."
+    }
+  },
+  "limits": {
+    "conversation_turns": {
+      "en-IN": "Each conversation is capped at 20 messages. You can start a new one.",
+      "hi-Latn": "Ek conversation mein 20 messages tak ki limit hai. Aap naya conversation shuru kar sakte hain."
+    },
+    "daily_conversations": {
+      "en-IN": "This demo allows 5 conversations a day, because it runs on paid AI services. Please come back tomorrow.",
+      "hi-Latn": "Yeh demo paid AI services par chalta hai, isliye din mein 5 conversations ki limit hai. Kal phir try karein."
+    },
+    "hourly_turns": {
+      "en-IN": "Too many messages in the last hour. Please try again in an hour.",
+      "hi-Latn": "Pichle ek ghante mein bahut messages ho gaye. Ek ghante baad phir try karein."
+    },
+    "spend": {
+      "en-IN": "The demo has used its budget for today, because it runs on paid AI services. Please come back tomorrow.",
+      "hi-Latn": "Aaj ka demo budget khatam ho gaya hai. Kal phir try karein."
+    }
+  }
+}

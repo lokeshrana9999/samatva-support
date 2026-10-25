@@ -152,7 +152,13 @@ Each step ends deployed, with the evals that exist so far passing.
    - Supabase: project `samatva-support` (ref `plyjyiyppcypfblaufoq`) in org `career-ops`, region `ap-south-1`, free plan. Ref, URL and DB password are in the gitignored `.env.local`; the anon and service-role keys get fetched in step 1.
    - Vercel: project `samatva-support` (`prj_SEBtq0GZew8yVWP0Y0uRfU5iKcgG`) in scope Kathion's projects, Hobby, Git-connected to the repo, so every push to `main` deploys. It's created with region `iad1` and preset "Other"; step 1 sets `bom1` in `vercel.json`, and Vercel detects Next.js once the app exists.
    - Jev: Lokesh's org key, default rate limits (see `docs/design.md`).
-1. Skeleton: Next.js app, core with ports, OpenRouter and Claude CLI adapters, `intake` and a plain chat round trip, keyword floor and `handoff` with verified crisis numbers. Deploy. First deployed link.
+1. Skeleton: Next.js app, core with ports, OpenRouter and Claude CLI adapters, `intake` and a plain chat round trip, keyword floor and `handoff` with verified crisis numbers. Deploy. First deployed link. Built 2026-10-26, with reviewer login, the `sessions` table and the history MAC pulled forward from later steps. Gaps that later steps close:
+   - No Jev yet: risk is the keyword floor alone, and `trace.risk.jev` reads `off` (a step-1-only value). Step 2 replaces it and fails closed.
+   - No `limits` table: only the 20-turn conversation cap is enforced, and the login attempt limit (D4) waits for step 5.
+   - `sessions.history_mac` is hex `text`, not `bytea`.
+   - The compact "if things get worse" crisis list shows in `understand` too, not only in recommend.
+   - Crisis lines: Tele-MANAS, Vandrevala and 181 were checked on their official pages on 2026-10-26. 112.gov.in refused connections that day, so 112 is listed but should be rechecked before the access key goes out.
+   - Chat model: `anthropic/claude-haiku-5.5` on OpenRouter ($0.10 / $0.50 per million tokens), the same family as the local Claude CLI.
 2. Jev adapter: risk tiers, fail closed, audit log table. Risk eval suite.
 3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite.
 4. Output filter and regenerate path. Red-team suite.

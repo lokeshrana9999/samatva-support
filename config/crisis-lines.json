@@ -1,0 +1,42 @@
+[
+  {
+    "id": "112",
+    "label": "Emergency (112)",
+    "number": "112",
+    "telHref": "tel:112",
+    "note": "Emergency, police, fire, ambulance",
+    "sourceUrl": "https://112.gov.in/about",
+    "checkedAt": "2026-10-26",
+    "when": "always"
+  },
+  {
+    "id": "tele-manas",
+    "label": "Tele-MANAS",
+    "number": "14416",
+    "telHref": "tel:14416",
+    "note": "24x7, free. Or 1-800 891 4416",
+    "sourceUrl": "https://telemanas.mohfw.gov.in/home",
+    "checkedAt": "2026-10-26",
+    "when": "always"
+  },
+  {
+    "id": "vandrevala",
+    "label": "Vandrevala Foundation",
+    "number": "+91 9999 666 555",
+    "telHref": "tel:+919999666555",
+    "note": "24x7, free. Call or WhatsApp",
+    "sourceUrl": "https://www.vandrevalafoundation.com/free-counseling",
+    "checkedAt": "2026-10-26",
+    "when": "always"
+  },
+  {
+    "id": "181",
+    "label": "Women Helpline (181)",
+    "number": "181",
+    "telHref": "tel:181",
+    "note": "24 hours, free, for women facing violence",
+    "sourceUrl": "https://wcdhry.gov.in/women-helpline-number-181/",
+    "checkedAt": "2026-10-26",
+    "when": "being_harmed"
+  }
+]

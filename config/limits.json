@@ -1,0 +1,7 @@
+{
+  "conversationTurns": 20,
+  "messageCodePoints": 1000,
+  "maxMessages": 40,
+  "loginDays": 7,
+  "turnDeadlineMs": 25000
+}

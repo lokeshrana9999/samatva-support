@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* Design tokens, "calm paper" (docs/design.md, design tokens). Light is the
+   default; dark applies when the system asks for it and no theme is forced,
+   or when the header menu forces it. */
+:root {
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --ink: #1f2328;
+  --muted: #5a6169;
+  --line: #e4dfd6;
+  --input-border: #8a9199;
+  --accent: #0f6b66;
+  --on-accent: #ffffff;
+  --focus: #0f6b66;
+  --user-bubble: #e6f0ee;
+  --urgent-bg: #fcefd9;
+  --urgent-ink: #4a2e00;
+  --urgent-border: #a35f00;
+  --urgent-btn: #1f2328;
+  --on-urgent-btn: #ffffff;
+  --warn: #8a4b00;
+  --danger: #b42318;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171a;
+    --surface: #1c2024;
+    --ink: #e8e6e1;
+    --muted: #a4abb3;
+    --line: #2c3238;
+    --input-border: #6b737c;
+    --accent: #5cc2ba;
+    --on-accent: #0b1f1d;
+    --focus: #5cc2ba;
+    --user-bubble: #1d3331;
+    --urgent-bg: #2b2213;
+    --urgent-ink: #f6dcae;
+    --urgent-border: #d99a3d;
+    --urgent-btn: #f6dcae;
+    --on-urgent-btn: #14171a;
+    --warn: #e8a951;
+    --danger: #f97066;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14171a;
+  --surface: #1c2024;
+  --ink: #e8e6e1;
+  --muted: #a4abb3;
+  --line: #2c3238;
+  --input-border: #6b737c;
+  --accent: #5cc2ba;
+  --on-accent: #0b1f1d;
+  --focus: #5cc2ba;
+  --user-bubble: #1d3331;
+  --urgent-bg: #2b2213;
+  --urgent-ink: #f6dcae;
+  --urgent-border: #d99a3d;
+  --urgent-btn: #f6dcae;
+  --on-urgent-btn: #14171a;
+  --warn: #e8a951;
+  --danger: #f97066;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-input-border: var(--input-border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-user-bubble: var(--user-bubble);
+  --color-urgent-bg: var(--urgent-bg);
+  --color-urgent-ink: var(--urgent-ink);
+  --color-urgent-border: var(--urgent-border);
+  --color-urgent-btn: var(--urgent-btn);
+  --color-on-urgent-btn: var(--on-urgent-btn);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter), system-ui, "Noto Sans Devanagari", sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 25px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fade-in 150ms ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

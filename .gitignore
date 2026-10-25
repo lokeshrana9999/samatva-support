@@ -9,3 +9,13 @@ dist/
 .vercel/
 .DS_Store
 supabase/.temp/
+
+# next.js and tooling
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+*.pem
+npm-debug.log*
+
+# local tool config
+.claude/
