@@ -64,6 +64,17 @@ const ConfigSchema = z.strictObject({
       close: z.number().int().positive(),
     }),
     historyWindow: z.number().int().positive(),
+    risk: z.strictObject({
+      riskTurns: z.number().int().positive(),
+      imminentP: z.number().min(0).max(1),
+      elevatedP: z.number().min(0).max(1),
+      harmNoulP: z.number().min(0).max(1),
+      beingHarmedNoulP: z.number().min(0).max(1),
+    }),
+    replyCheckP: z.number().min(0).max(1),
+    jevTimeoutMs: z.number().int().positive(),
+    jevMaxRetries: z.number().int().min(0),
+    jevDeadlineMs: z.number().int().positive(),
   }),
   limits: z.strictObject({
     conversationTurns: z.number().int().positive(),

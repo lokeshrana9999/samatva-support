@@ -2,6 +2,7 @@
 // Cookies can't be set once a stream starts, so `ss_sid` goes out as a header
 // on the Response itself.
 import { cookies } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { config } from "@config";
 import { deps } from "@/composition";
@@ -53,7 +54,7 @@ function storelessHandoff(messages: Msg[], floorBeingHarmed: boolean): Final {
     trace: {
       stageIn: "intake",
       stageOut: "handoff",
-      risk: { keyword: "imminent", jev: "off", final: "imminent" },
+      risk: { keyword: "imminent", jev: null, final: "imminent" },
       checks: [],
       regenerated: false,
       provider: null,
@@ -64,7 +65,8 @@ function storelessHandoff(messages: Msg[], floorBeingHarmed: boolean): Final {
 }
 
 export async function POST(req: Request) {
-  if (!(await requireReviewer())) return jsonError(401, "login_required");
+  const reviewerHash = await requireReviewer();
+  if (!reviewerHash) return jsonError(401, "login_required");
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "bad_request");
@@ -109,9 +111,10 @@ export async function POST(req: Request) {
       const send = (event: string, data: unknown) => controller.enqueue(encoder.encode(sse(event, data)));
       const emit = (phase: Phase) => send("status", { phase });
       try {
-        const { final, session: next } = await runTurn(
+        const { final, session: next, audit } = await runTurn(
           {
             chat: d.chat,
+            decision: d.decision,
             config,
             keywordFloor: d.keywordFloor,
             emit,
@@ -122,6 +125,8 @@ export async function POST(req: Request) {
         );
         next.historyMac = historyMac([...messages, { role: "assistant", text: final.reply }]);
         const saved = await d.sessions.save(next);
+        // Written after the response, so it adds no user-facing latency (D15).
+        after(() => d.audit.record({ ...audit, sessionId: turnSession.id, reviewerHash }));
         if (saved === "conflict") {
           send("final", {
             ...final,

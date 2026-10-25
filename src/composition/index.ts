@@ -3,7 +3,10 @@
 import "server-only";
 import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
-import type { ChatModel, SessionStore } from "@/core/ports";
+import { DecisionError, type AuditLog, type ChatModel, type DecisionModel, type SessionStore } from "@/core/ports";
+import { JevDecisionModel } from "@/adapters/decision/jev";
+import { MemoryAuditLog } from "@/adapters/memory/audit";
+import { SupabaseAuditLog } from "@/adapters/supabase/audit";
 import { ProviderChain } from "@/adapters/chat/chain";
 import { OpenAICompatibleProvider } from "@/adapters/chat/openai-compatible";
 import type { ChatProvider } from "@/adapters/chat/provider";
@@ -12,7 +15,9 @@ import { SupabaseSessionStore } from "@/adapters/supabase/sessions";
 
 export type Deps = {
   chat: ChatModel;
+  decision: DecisionModel;
   sessions: SessionStore;
+  audit: AuditLog;
   keywordFloor: ReturnType<typeof compileFloor>;
   turnDeadlineMs: number;
 };
@@ -47,15 +52,36 @@ async function build(): Promise<Deps> {
   }
 
   let sessions: SessionStore;
+  let audit: AuditLog;
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     sessions = new SupabaseSessionStore();
+    audit = new SupabaseAuditLog();
   } else if (process.env.NODE_ENV !== "production") {
     sessions = new MemorySessionStore();
+    audit = new MemoryAuditLog();
   } else {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in production");
   }
 
-  return { chat, sessions, keywordFloor, turnDeadlineMs };
+  return { chat, decision: decisionModel(), sessions, audit, keywordFloor, turnDeadlineMs };
+}
+
+// Jev in every environment, no stand-in model (D20). Without a key every call
+// fails, so the gates fail closed rather than open (spec 4b).
+function decisionModel(): DecisionModel {
+  const t = config.thresholds;
+  if (!process.env.TYPESAFE_API_KEY) {
+    console.error("[composition] TYPESAFE_API_KEY is not set; every Jev call fails closed");
+    const fail = async (): Promise<never> => {
+      throw new DecisionError("TYPESAFE_API_KEY is not set");
+    };
+    return { assessRisk: fail, checkReply: fail };
+  }
+  return new JevDecisionModel(config.providers.jev.model, {
+    timeoutMs: t.jevTimeoutMs,
+    maxRetries: t.jevMaxRetries,
+    deadlineMs: t.jevDeadlineMs,
+  });
 }
 
 export function deps(): Promise<Deps> {

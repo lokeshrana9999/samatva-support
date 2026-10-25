@@ -614,7 +614,7 @@ function TraceRow({ trace }: { trace: Final["trace"] }) {
   const rows: [string, string][] = [
     ["stage", `${trace.stageIn} → ${trace.stageOut}`],
     ["keyword floor", trace.risk.keyword ?? "none"],
-    ["Jev", typeof jev === "string" ? jev : `${jev.tier} (${jev.score.toFixed(2)})`],
+    ["Jev", jev === null ? "not asked" : typeof jev === "string" ? jev : `${jev.tier} (${jev.score.toFixed(2)})`],
     ["final risk", trace.risk.final],
     ...trace.checks.map((c): [string, string] => [`check: ${c.name}`, c.pass ? "pass" : "fail"]),
     ["regenerated", trace.regenerated ? "yes" : "no"],

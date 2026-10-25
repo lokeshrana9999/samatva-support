@@ -34,6 +34,72 @@ export interface ChatModel {
   }>;
 }
 
+export type YesNo = { yes: boolean; p: number };
+
+export class DecisionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DecisionError";
+  }
+}
+
+// Speaks the domain, not Jev's wire format (design D20). Throws DecisionError;
+// the core fails closed on it (spec 4b).
+export interface DecisionModel {
+  assessRisk(
+    userTurns: string[],
+    signal: AbortSignal,
+  ): Promise<{
+    p: Record<"none" | "elevated" | "imminent", number>;
+    selfHarm: number;
+    harmToOthers: number;
+    beingHarmed: number;
+    model: string;
+    usage: Usage;
+  }>;
+  checkReply(
+    reply: string,
+    stage: string,
+    signal: AbortSignal,
+  ): Promise<{
+    diagnosis: number;
+    medicalAdvice: number;
+    claimsHuman: number;
+    model: string;
+    usage: Usage;
+  }>;
+}
+
+// Content-free by construction: every field is an enum, number, id or name
+// from a fixed list (design, audit_events).
+export type TurnAudit = {
+  turn: number;
+  stageIn: string;
+  stageOut: string;
+  riskKeyword: string | null;
+  keywordPattern: string | null;
+  riskJev: string | null;
+  riskJevP: Record<string, number> | null;
+  riskFinal: string;
+  filterViolations: string[];
+  regenerated: boolean;
+  stockFallback: boolean;
+  tools: string[];
+  toolRejected: boolean;
+  provider: string | null;
+  model: string | null;
+  jevModel: string | null;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  latencyMs: number;
+  outcome: "ok" | "handoff" | "limit" | "error";
+};
+
+export interface AuditLog {
+  record(e: TurnAudit & { sessionId: string; reviewerHash: string }): Promise<void>;
+}
+
 export interface SessionStore {
   create(init: { adult: true; consent: boolean }): Promise<SessionState>;
   load(id: string): Promise<SessionState | null>;

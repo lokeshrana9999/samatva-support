@@ -50,14 +50,15 @@ export type CrisisLine = {
   checkedAt: string;
 };
 
-// `jev: 'off'` exists only until step 2 wires the Jev adapter; after that the
-// field is a Jev result or 'error' (fail closed), as in the design.
+// `jev` is null only when Jev wasn't asked: the keyword floor's imminent
+// handoff and turns already in handoff skip it. 'error' means it failed and
+// the gate failed closed.
 export type Trace = {
   stageIn: Stage;
   stageOut: Stage;
   risk: {
     keyword: Tier | null;
-    jev: { tier: Tier; score: number } | "error" | "off";
+    jev: { tier: Tier; score: number } | "error" | null;
     final: Tier;
   };
   checks: { name: string; pass: boolean }[];

@@ -1,5 +1,16 @@
 {
   "understandMaxTurns": 6,
   "lengthCaps": { "understand": 400, "recommend": 700, "close": 300 },
-  "historyWindow": 6
+  "historyWindow": 6,
+  "risk": {
+    "riskTurns": 3,
+    "imminentP": 0.3,
+    "elevatedP": 0.25,
+    "harmNoulP": 0.3,
+    "beingHarmedNoulP": 0.3
+  },
+  "replyCheckP": 0.3,
+  "jevTimeoutMs": 1500,
+  "jevMaxRetries": 1,
+  "jevDeadlineMs": 4000
 }
