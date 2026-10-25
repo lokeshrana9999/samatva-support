@@ -1,7 +1,7 @@
 # samatva-support: spec
 
 Date: 2026-10-25
-Status: approved by Lokesh on 2026-10-25. Supersedes the samatva-centred plan in `docs/handoff.md`.
+Status: approved by Lokesh on 2026-10-25; amended 2026-10-26 for reviewer access (decision 11). Supersedes the samatva-centred plan in `docs/handoff.md`. The full system and frontend design is `docs/design.md`.
 
 A deployed support assistant for Amaha's AI Engineer build, option 1: "a conversational agent that helps someone figure out what kind of help they might need". It asks what is going on, works out which kind of help fits, and points to matching Amaha services and therapists. A controller in code owns the stages and the safety gates; the LLM phrases the conversation and calls catalogue search tools inside them; Jev (TypeSafe AI's decision model) makes the typed safety and routing decisions.
 
@@ -18,7 +18,7 @@ A deployed support assistant for Amaha's AI Engineer build, option 1: "a convers
 | 4a | Output filter: deterministic checks (link allowlist, every therapist or service name matches a tool result, length cap) plus Jev yes/no questions per reply (diagnosis? medical or medication advice? claims to be human?); regenerate once with the violation named, then fall back to a stock line | Exact checks are provable in evals; Jev covers the paraphrase cases a regex misses. |
 | 4b | Fail closed: if a Jev call errors or times out, the risk gate treats the turn as `elevated` and the filter blocks the reply | A safety gate that opens when its model is down isn't a gate. |
 | 5 | Next.js (App Router, TypeScript) on Vercel, one repo | Lokesh's stack; API routes keep every key server-side. |
-| 5a | Supabase Postgres holds the catalogue, a content-free audit log, rate-limit and spend counters, and opted-in transcripts. No Supabase Auth | One store for everything; the demo is open and rate-limited by IP plus an anonymous session id. |
+| 5a | Supabase Postgres holds the catalogue, a content-free audit log, rate-limit and spend counters, and opted-in transcripts. No Supabase Auth | One store for everything. Access is the reviewer login in decision 11, and limits apply per IP and per reviewer. |
 | 5b | Transcripts are saved only with opt-in consent (first-screen notice plus checkbox), deleted automatically after 30 days, readable only server-side (RLS, service role), and deletable by the user from the UI | It's a public link, so real people may type real things despite the synthetic-data rule. |
 | 5c | The model layer is a provider chain behind one interface. Deployed: `OPEN_ROUTER`, `GOOGLE_STUDIO`, `ALIBABA_KEY`, in a configurable order, failing over to the next on error, timeout or rate limit. Local dev and evals: the Claude CLI on Haiku, and the Grok CLI as a second eval target | Uses keys Lokesh already has, and survives one provider being down. |
 | 5d | CLI adapters run only when `NODE_ENV !== 'production'` and an explicit `LLM_LOCAL_CLI` flag is set; the production build excludes them | Subscription CLIs are for Lokesh's own development and must never serve the public link. |
@@ -32,11 +32,13 @@ A deployed support assistant for Amaha's AI Engineer build, option 1: "a convers
 | 9a | When a cap hits, the user sees "demo limit reached for today" and the crisis lines stay on screen; the keyword floor and the handoff never sit behind a cap | A limit must never block someone in danger from the numbers. |
 | 10 | Repo stays `samatva-support`, private on GitHub until submission, then public; MIT license | Lokesh's call on visibility; MIT is my default since no license was named. |
 | 10a | No timebox; work goes in the steps below, each ending deployed | Lokesh prefers to size as the build goes. |
+| 11 | Reviewer login: any email plus one shared access key that Lokesh hands out and can rotate; the email is kept only as a keyed hash. `/evals` and the crisis lines stay public | Added 2026-10-25 in the frontend interview: only reviewers reach the paid model calls, and rotating one key cuts everyone off. Details in `docs/design.md` (D1 to D6). |
 
 ## v1 scope
 
 In:
 
+- reviewer login (decision 11)
 - intake with identity disclosure (an AI, not a clinician, not an emergency service, an independent demo), an 18+ confirmation, and the transcript consent checkbox
 - the understand, recommend and close stages, plus the risk handoff from any stage
 - Jev risk gate with keyword floor; output filter; fail closed
@@ -48,7 +50,7 @@ In:
 Out of v1:
 
 - samatva's ladder (vent, label, distance) and its voice profiles
-- accounts and sign-in, booking, payments, or calls to any real Amaha API
+- user accounts (beyond the shared reviewer key), booking, payments, or calls to any real Amaha API
 - memory across conversations
 - Devanagari Hindi and other Indian languages; crisis lines outside India
 - users under 18
@@ -57,9 +59,11 @@ Out of v1:
 
 ## architecture
 
+A summary; `docs/design.md` is the detailed version and wins where they differ.
+
 ```
  browser (Next.js page)
-    |  POST /api/turn { sessionId, messages }
+    |  POST /api/turn { messages }  (session id in a cookie)
     v
  +-------------------------- core (no I/O) ---------------------------+
  |  limits check --> risk gate --> controller --> output filter        |

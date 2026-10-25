@@ -1,7 +1,7 @@
 # Handoff: samatva-support
 
 Date: 2026-10-25
-Status: nothing built. The next step is a spec interview with Lokesh, ending in `docs/spec.md`. Do not write app code until he approves that spec.
+Status: superseded on 2026-10-25. The build no longer follows samatva's ladder; read `docs/spec.md` and `docs/design.md` instead. Kept as the starting brief for the record.
 
 samatva-support will be a small deployed web app: a support assistant that listens first and then helps someone work out what kind of help they need. It runs the restraint design from samatva (`C:\Users\lokes\Documents\Projects\personal\samatva`) inside a real controller. It is Lokesh's build submission for Amaha's AI Engineer role.
 
