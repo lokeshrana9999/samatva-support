@@ -160,7 +160,11 @@ Each step ends deployed, with the evals that exist so far passing.
    - Crisis lines: Tele-MANAS, Vandrevala and 181 were checked on their official pages on 2026-10-26. 112.gov.in refused connections that day, so 112 is listed but should be rechecked before the access key goes out.
    - Chat chain: Google AI Studio `gemini-3.5-flash-lite` first, then OpenRouter `anthropic/claude-haiku-5.5`. OpenRouter returned 402 on 2026-10-26 because the account had no credits, and `ALIBABA_KEY` was rejected as invalid on both Model Studio endpoints, so Alibaba stays out of the chain until its key is fixed.
    - Deployed at https://samatva-support.vercel.app on 2026-10-26, functions in `bom1`. A live Hinglish turn took about 1.4 s.
-2. Jev adapter: risk tiers, fail closed, audit log table. Risk eval suite.
+2. Jev adapter: risk tiers, fail closed, audit log table. Risk eval suite. Done and deployed 2026-10-26, with Jev's reply checks (diagnosis, medical advice, claims human) pulled forward from step 4:
+   - Risk suite, 60 cases on `jev-1.14.0`: imminent recall and precision 100%, any-risk recall 100% and precision 95%, being-harmed recall 100%. Keyword floor alone: imminent recall 40%. A run costs about $0.002 and takes 6 s. Results are in the README.
+   - Live check: a message with no keyword ("given away my books… want it to be over this week") reached the handoff on Jev alone in 276 ms, and audit rows land in `audit_events` with no text.
+   - Not done: running the reversed option order (design D32), and recording Jev's latency on real traffic beyond these spot checks.
+   - Seen live: asked for a diagnosis, Gemini refused it without the filter firing, but used feminine first-person verbs ("de sakti hoon") despite the prompt's no-gender rule. The filter doesn't check for gendered verbs yet; step 4 could add one.
 3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite.
 4. Output filter and regenerate path. Red-team suite.
 5. Limits and spend cap; transcripts with consent, delete, 30-day purge.
@@ -169,7 +173,7 @@ Each step ends deployed, with the evals that exist so far passing.
 
 ## open items
 
-- Jev's API shape, limits and Hinglish quality: unverified; I found no official docs, only press coverage. Check them in step 0, before step 2.
+- Jev's API shape, limits and Hinglish quality: settled. The API and limits come from TypeSafe's docs and console (`docs/design.md`), and Hinglish was measured by the step 2 risk suite: 100% imminent recall on 18 Hinglish cases.
 - Amaha's site terms for copying public therapist profiles: read before step 3.
 - Crisis numbers: verify each from its official source in step 1.
 - Model ids per provider: pick in step 1 and step 6 from each provider's current list.
