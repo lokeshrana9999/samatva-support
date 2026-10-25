@@ -4,8 +4,16 @@
 param(
   [Parameter(Mandatory = $true)][string]$Name,
   [string]$Pattern = '^\S{16,}$',
-  [string]$File = (Join-Path $PSScriptRoot '..\.env.local')
+  [string]$File = ''
 )
+
+# Windows PowerShell 5.1 leaves $PSScriptRoot empty inside param() defaults,
+# so the default path is resolved here instead.
+if (-not $File) {
+  $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+  $File = Join-Path $here '..\.env.local'
+}
+$File = [System.IO.Path]::GetFullPath($File)
 
 $value = $null
 for ($i = 0; $i -lt 5 -and -not $value; $i++) {
@@ -16,10 +24,12 @@ $value = $value.Trim()
 if ($value -notmatch $Pattern) { Write-Host "The clipboard doesn't look like a $Name. Nothing was written."; exit 1 }
 
 $lines = @()
-if (Test-Path $File) { $lines = @(Get-Content $File | Where-Object { $_ -notmatch "^$([regex]::Escape($Name))=" }) }
+if (Test-Path -LiteralPath $File) {
+  $lines = @(Get-Content -LiteralPath $File | Where-Object { $_ -notmatch "^$([regex]::Escape($Name))=" })
+}
 $lines += "$Name=$value"
 # UTF-8 without a BOM, so dotenv parsers read the first line cleanly.
-[System.IO.File]::WriteAllLines((Resolve-Path -LiteralPath (Split-Path $File) | Join-Path -ChildPath (Split-Path $File -Leaf)), $lines, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllLines($File, [string[]]$lines, (New-Object System.Text.UTF8Encoding($false)))
 
 Set-Clipboard -Value ' '
 Write-Host "Saved $Name to $(Split-Path $File -Leaf) ($($value.Length) characters). Clipboard cleared."
