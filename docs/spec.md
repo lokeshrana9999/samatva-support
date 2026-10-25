@@ -147,7 +147,11 @@ Cases are synthetic, in English and Hinglish, stored as JSON under `evals/`. The
 
 Each step ends deployed, with the evals that exist so far passing.
 
-0. Prereqs, batched for Lokesh at once: Vercel project, Supabase project, Jev API access and its docs, private GitHub repo.
+0. Prereqs, batched for Lokesh at once: Vercel project, Supabase project, Jev API access and its docs, private GitHub repo. Done 2026-10-26:
+   - GitHub: `lokeshrana9999/samatva-support`, private, default branch `main`.
+   - Supabase: project `samatva-support` (ref `plyjyiyppcypfblaufoq`) in org `career-ops`, region `ap-south-1`, free plan. Ref, URL and DB password are in the gitignored `.env.local`; the anon and service-role keys get fetched in step 1.
+   - Vercel: project `samatva-support` (`prj_SEBtq0GZew8yVWP0Y0uRfU5iKcgG`) in scope Kathion's projects, Hobby, Git-connected to the repo, so every push to `main` deploys. It's created with region `iad1` and preset "Other"; step 1 sets `bom1` in `vercel.json`, and Vercel detects Next.js once the app exists.
+   - Jev: Lokesh's org key, default rate limits (see `docs/design.md`).
 1. Skeleton: Next.js app, core with ports, OpenRouter and Claude CLI adapters, `intake` and a plain chat round trip, keyword floor and `handoff` with verified crisis numbers. Deploy. First deployed link.
 2. Jev adapter: risk tiers, fail closed, audit log table. Risk eval suite.
 3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite.

@@ -8,3 +8,4 @@ dist/
 .next/
 .vercel/
 .DS_Store
+supabase/.temp/

@@ -1258,7 +1258,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 
 1. Jev: the API shape, price, context limits and SDK are from TypeSafe's docs, and the org's rate limits from the console (80 requests/s, 100,000 input tokens/s, read 2026-10-26). Still open: latency on our own states, and Hinglish quality, which the risk suite measures.
 2. Every chat provider and TypeSafe receive message text, and TypeSafe's zero data retention is enterprise-only. The disclosure doesn't say so yet. A proposed line for Lokesh to approve before deploy: "What you type is sent to AI services (TypeSafe and the model providers named under About this demo) to make replies."
-3. Supabase free-tier pause and pg_cron availability on the chosen plan, and Vercel region choice on Hobby: check in step 0.
+3. The projects exist (spec step 0). Still to check in step 1: Supabase free-tier pausing and pg_cron on the free plan, and whether Vercel Hobby honours `regions: ["bom1"]` (the project was created with `iad1`).
 4. Latency targets are guesses; measure in step 1 and update the budget table.
 5. Rules table and thresholds are example values until the evals tune them and a clinician reviews them.
 6. Crisis line names, numbers and notes come from config once verified in step 1; this doc holds none of them except 112.
