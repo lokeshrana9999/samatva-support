@@ -88,7 +88,8 @@ export async function POST(req: Request) {
       session = sid ? await d.sessions.load(sid) : null;
       if (!session) return jsonError(409, "stale_session");
     }
-  } catch {
+  } catch (e) {
+    console.error("[turn] session store unavailable:", (e as Error).message);
     const floor = d.keywordFloor(last.text);
     if (floor.tier !== "imminent") return jsonError(503, "unavailable");
     return new Response(sse("final", storelessHandoff(messages, floor.beingHarmed)), {
