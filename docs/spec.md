@@ -158,7 +158,8 @@ Each step ends deployed, with the evals that exist so far passing.
    - `sessions.history_mac` is hex `text`, not `bytea`.
    - The compact "if things get worse" crisis list shows in `understand` too, not only in recommend.
    - Crisis lines: Tele-MANAS, Vandrevala and 181 were checked on their official pages on 2026-10-26. 112.gov.in refused connections that day, so 112 is listed but should be rechecked before the access key goes out.
-   - Chat model: `anthropic/claude-haiku-5.5` on OpenRouter ($0.10 / $0.50 per million tokens), the same family as the local Claude CLI.
+   - Chat chain: Google AI Studio `gemini-3.5-flash-lite` first, then OpenRouter `anthropic/claude-haiku-5.5`. OpenRouter returned 402 on 2026-10-26 because the account had no credits, and `ALIBABA_KEY` was rejected as invalid on both Model Studio endpoints, so Alibaba stays out of the chain until its key is fixed.
+   - Deployed at https://samatva-support.vercel.app on 2026-10-26, functions in `bom1`. A live Hinglish turn took about 1.4 s.
 2. Jev adapter: risk tiers, fail closed, audit log table. Risk eval suite.
 3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite.
 4. Output filter and regenerate path. Red-team suite.
