@@ -1,7 +1,7 @@
 # samatva-support: architecture
 
 Date: 2026-10-25
-Status: draft for Lokesh's approval. `docs/spec.md` is the source of truth; this doc fills in what the spec leaves open and changes none of its decisions.
+Status: approved by Lokesh on 2026-10-25, including reviewer access and the `/api/turn` contract added the same day. `docs/spec.md` is the source of truth; this doc fills in what the spec leaves open. The one override is reviewer access, which replaces spec 5a's "the demo is open" (Lokesh, frontend-spec interview, 2026-10-25).
 
 A pure TypeScript core runs one turn as a fixed pipeline (keyword floor, limits, Jev risk gate, stage controller, output filter) and touches the world only through seven ports; Next.js routes, Supabase, Jev and the model providers are adapters you can swap without editing the core.
 
@@ -9,7 +9,8 @@ A pure TypeScript core runs one turn as a fixed pipeline (keyword floor, limits,
 
 ```
    +---------------- src/app: Next.js shell --------------------+
-   | page.tsx   /api/session   /api/turn   /api/transcript      |
+   | page.tsx  /api/login  /api/turn (SSE)  /api/conversation   |
+   | requireReviewer() on every API route except /api/login     |
    +-------------------------------|----------------------------+
                                    | src/composition wires
                                    v adapters into ports
@@ -32,6 +33,37 @@ A pure TypeScript core runs one turn as a fixed pipeline (keyword floor, limits,
 The core imports only `zod` and its own files. An ESLint `no-restricted-imports` rule on `src/core/**` bans `next`, `@supabase/*`, `node:child_process` and `src/adapters/**`, so the boundary is checked on every commit rather than kept by habit.
 
 The spec lists six ports. Q1 of the interview (session state on the server) adds a seventh, `SessionStore`.
+
+## reviewer access
+
+Only reviewers holding the shared access key can chat. Lokesh can cut everyone off by rotating one env var. Access is a shell concern: the core never sees an email or a key, only a reviewer hash it passes to limits and audit.
+
+```
+ login screen (crisis lines + footer, no auth)
+   | POST /api/login { email, accessKey }
+   v
+ limit: 10 attempts / 15 min per IP hash --over--> 429
+   | ok
+ timingSafeEqual(HMAC(k, accessKey), HMAC(k, DEMO_ACCESS_KEY))
+   |--no--> 401, same body and timing as any failure
+   | yes
+ reviewerHash = HMAC(EMAIL_HASH_SECRET, lower(trim(email)))
+ set cookie ss_auth = payload.signature  (7 days)
+   v
+ intake --> POST /api/turn, DELETE /api/conversation
+            each calls requireReviewer() first --none/bad--> 401
+```
+
+1. `POST /api/login` takes `{ email, accessKey }` (zod: an email shape, at most 254 chars; key at most 200 chars). Any email is accepted.
+2. The attempt counts against `login:<iphash>` in `limits` before the key is checked, success or not, so the key can't be brute-forced from one IP. Over 10 in 15 minutes returns 429.
+3. The key comparison HMACs both sides with a per-process random key, then uses `crypto.timingSafeEqual`. Hashing first makes the inputs equal length, so neither the key's value nor its length leaks through timing.
+4. On success the route sets `ss_auth`: `httpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Max-Age` 7 days. The value is `base64url(payload) + "." + base64url(HMAC-SHA256(signingKey, payload))`, with `payload = { rh: reviewerHash, exp }`.
+5. `signingKey = HMAC(AUTH_COOKIE_SECRET, DEMO_ACCESS_KEY)`. Rotating `DEMO_ACCESS_KEY` changes the signing key, so every existing cookie fails its signature check at once, with no session list to clear.
+6. `requireReviewer(req)` in `src/app/lib/reviewer.ts` checks the signature (constant time) and `exp`, and returns the reviewer hash or a 401. Every protected route calls it as its first line. It's an explicit call rather than Next middleware, so it runs in the Node runtime with the routes and has unit tests.
+
+`/evals` stays public: it's read-only and calls no model. The login screen shows the crisis lines and footer without auth, so 9a still holds for anyone who reaches the link. There's no logout endpoint in v1; the cookie expires after 7 days, or on rotation.
+
+The email is personal data, so it's never stored, logged, shown or emailed. Only `reviewerHash` is kept: an HMAC with the server secret `EMAIL_HASH_SECRET`, the same keyed-salt approach as the IP hash, so the hash can't be reversed with a list of guessed emails without the secret. Unlike the IP hash, it doesn't fold in the date. Per-reviewer limits and the audit log need one reviewer to look the same across days, and the email was given knowingly for exactly that, unlike an IP.
 
 ## one turn, end to end
 
@@ -58,12 +90,15 @@ browser   /api/turn         core.runTurn              ports
   |          |                   | filter: exact checks  |
   |          |                   |--checkReply---------->| DecisionModel
   |          |                   |--save (version)------>| SessionStore
-  |          |<-- result, effects|                       |
-  |<---------| reply, cards      |                       |
+  |<-status--|<-- emit(phase) ---| (reading, thinking,    |
+  |          |                   |  searching, checking, |
+  |          |                   |  failover)            |
+  |          |<-- final, effects |                       |
+  |<-final---| SSE, then close   |                       |
   |          | after(): audit, transcript, spend         |
 ```
 
-1. The route parses the body with zod (at most 40 messages, user text at most 1,000 characters), reads the session id from the `ss_sid` cookie, and computes the IP hash.
+1. The route calls `requireReviewer()` (401 without a valid `ss_auth`), parses the body with zod (at most 40 messages, user text at most 1,000 characters), and computes the IP hash. If the body has `start`, it creates a new session (counting a conversation against the limits) and sets `ss_sid`; otherwise it reads the session id from `ss_sid`.
 2. The keyword floor runs first because it needs no network. If it returns `imminent`, the turn goes to `handoff` even when every later step fails or a cap is hit (spec 9a).
 3. The session row loads and the limit check runs in parallel. The route verifies the client's message history against the stored HMAC chain; a mismatch returns 409 and the client starts over.
 4. If a cap is hit, the reply is "demo limit reached for today" with the crisis lines, and no model is called.
@@ -71,7 +106,89 @@ browser   /api/turn         core.runTurn              ports
 6. The controller picks the stage, builds the prompt, and runs the chat model and tool loop. The output filter checks the reply; on a violation it regenerates once, then falls back to a stock line.
 7. The session row saves with an optimistic version check before the response, so the next turn sees it. Audit, transcript and spend writes run after the response in Next's `after()`, so they add no user-facing latency.
 
-There is no token streaming. The filter has to see the whole reply before any of it is shown, so the browser gets a typing indicator and then the full reply.
+### the /api/turn contract
+
+The response streams progress, not tokens: zero or more `status` events, then one `final` event. The filter has to pass the whole reply before any of it is shown, so the reply arrives only in `final` (contract from the frontend spec, approved by Lokesh 2026-10-25).
+
+```
+POST /api/turn
+cookies: ss_auth (always), ss_sid (after the first turn)
+body: { start?: { adult: true; consent: boolean },
+        messages: { role: 'user' | 'assistant'; text: string }[] }
+
+200 text/event-stream
+event: status  data: {"phase":"reading"}
+event: status  data: {"phase":"thinking"}
+event: final   data: { ...Final }
+```
+
+The browser keeps the conversation in `sessionStorage` and sends it every turn. It sends `start` when its history is empty; `start` always opens a new session and replaces any old `ss_sid`, so a new tab never collides with an old conversation. The session id itself never reaches page scripts (A3).
+
+| phase | emitted when |
+|---|---|
+| `reading` | the risk gate (and needs call) starts |
+| `thinking` | a chat call starts |
+| `searching` | the controller runs a catalogue tool |
+| `checking` | the output filter starts |
+| `failover` | the chain moves to the next provider |
+
+```ts
+type Final = {
+  reply: string;
+  stage: Stage;
+  turnsUsed: number;
+  turnsLimit: number;
+  replaced: null | { reason: 'diagnosis' | 'medical' | 'claims_human'
+                     | 'link' | 'name' | 'length' | 'error' };
+  helpTypes: string[];        // labels from the rules table
+  cards: Card[];
+  crisisLines: CrisisLine[];  // always; 181 only if beingHarmed
+  limit: null | { kind: 'conversation_turns' | 'daily_conversations'
+                  | 'hourly_turns' | 'spend' };
+  trace: Trace;
+};
+
+type Card = {                 // catalogue fields only (spec 2a)
+  id: string; kind: 'therapist' | 'service';
+  name: string; title: string; languages: string[];
+  specialties: string[]; modes: string[]; cities: string[];
+  profileUrl: string; sourceUrl: string; copiedAt: string;
+};
+
+type CrisisLine = {           // from config/crisis-lines.json
+  id: string; label: string; number: string; telHref: string;
+  note: string; sourceUrl: string; checkedAt: string;
+};
+
+type Trace = {                // content-free: no text, no needs values
+  stageIn: Stage; stageOut: Stage;
+  risk: {
+    keyword: Tier | null;
+    jev: { tier: Tier; score: number } | 'error';
+    final: Tier;
+  };
+  checks: { name: string; pass: boolean }[];
+  regenerated: boolean;
+  provider: string | null;
+  providersTried: string[];
+  latencyMs: number;
+};
+```
+
+`replaced.reason = 'error'` covers every stock line not caused by a filter check: a Jev error that blocks the reply (4b), all providers failing, the tool-loop cap, or the turn deadline. `trace.risk.jev.score` is `p(elevated) + p(imminent)`, the risk mass the tier threshold reads. `trace` mirrors the audit event, so it shows the reviewer nothing the audit log doesn't already hold.
+
+A hit cap is not an error: the route returns 200 and a `final` with `limit` set, the limit message as `reply`, and the crisis lines. Errors before the stream starts return JSON `{ error, crisisLines }`:
+
+| status | `error` | UI does |
+|---|---|---|
+| 400 | `bad_request` | error state |
+| 401 | `login_required` | back to the login screen |
+| 409 | `history_mismatch` or `stale_session` | starts a new conversation |
+| 503 | `unavailable` (Supabase down) | error state; crisis lines stay |
+
+A failure after the first event ends the stream with a `final` holding the stage's stock line and `replaced.reason = 'error'`. A dropped stream is the UI's error state. The keyword floor's `imminent` handoff still returns 200 with a `final` even when Supabase is down, because it needs no stored state.
+
+`DELETE /api/conversation` deletes the transcript rows (if consent was given) and the session row, clears `ss_sid`, and returns 204 either way. The crisis-line list is baked into the page at build from `config/crisis-lines.json`, so the login and intake screens need no request.
 
 ### latency budget
 
@@ -259,6 +376,7 @@ export interface ChatModel {
     signal: AbortSignal;     // carries the turn deadline
   }): Promise<{
     action: Action; provider: string; model: string; usage: Usage;
+    providersTried: string[];  // for the trace and audit event
   }>;
 }
 
@@ -293,13 +411,14 @@ export interface SessionStore {
 }
 
 export interface RateLimiter {
-  startConversation(ipHash: string): Promise<LimitResult>;
-  startTurn(ipHash: string): Promise<LimitResult>; // + spend check
+  startConversation(who: Who): Promise<LimitResult>;
+  startTurn(who: Who): Promise<LimitResult>; // + spend check
   addSpend(usd: number): Promise<void>;
 }
+export type Who = { ipHash: string; reviewerHash: string };
 export type LimitResult =
   | { ok: true }
-  | { ok: false; reason: 'ip_conversations' | 'ip_turns' | 'spend' };
+  | { ok: false; reason: 'conversations' | 'turns' | 'spend' };
 
 export interface AuditLog { record(e: TurnAudit): Promise<void> }
 
@@ -312,20 +431,22 @@ export interface TranscriptStore {
 }
 ```
 
-`DecisionModel` speaks the domain (risk, needs, reply check), not Jev's wire format, so the core never learns Jev's API and the Jev adapter is the only file that changes when the docs arrive. Per Q2 there is no stand-in model adapter in any environment: Jev-dependent steps wait for Jev access, and unit tests use scripted fakes that return fixed answers, not a model.
+`DecisionModel` speaks the domain (risk, needs, reply check), not Jev's wire format, so the core never learns Jev's API and the Jev adapter is the only file tied to TypeSafe's API. Per Q2 there is no stand-in model adapter in any environment: Jev-dependent steps wait for Jev access, and unit tests use scripted fakes that return fixed answers, not a model.
 
 The core entry point:
 
 ```ts
+export type Phase =
+  'reading' | 'thinking' | 'searching' | 'checking' | 'failover';
+
 export async function runTurn(
-  deps: Ports & { config: Config; now: Date },
-  input: { session: SessionState; ipHash: string; messages: Msg[] },
+  deps: Ports & {
+    config: Config; now: Date;
+    emit: (phase: Phase) => void;  // the route writes SSE status
+  },
+  input: { session: SessionState; who: Who; messages: Msg[] },
 ): Promise<{
-  reply: string;
-  stage: Stage;
-  cards: Card[];
-  crisisLines: CrisisLine[] | null;
-  notice?: 'limit_reached' | 'unavailable';
+  final: Final;
   effects: {
     audit: TurnAudit; transcript: Msg[] | null; spendUsd: number;
   };
@@ -434,6 +555,7 @@ create table sessions (
   understand_turns   int  not null default 0,  -- cap 6
   needs              jsonb not null default '{}', -- enum-only
   history_mac        bytea,                -- HMAC chain, no text
+  being_harmed       boolean not null default false, -- sticky; adds 181
   transcript_consent boolean not null,
   version            int  not null default 0   -- optimistic lock
 );
@@ -442,7 +564,7 @@ create index on sessions (last_seen_at);
 
 Messages stay in the browser unless the user consented. Each turn the server checks them against `history_mac`, where `mac_n = HMAC(HISTORY_MAC_SECRET, mac_n-1 || role || text)`. That stops a client from forging earlier assistant turns or replaying an old state to undo the `elevated` lock. The row holds no IP hash, so it can't be joined to the limits table, and it's purged 24 hours after `last_seen_at`.
 
-The session id is created by `POST /api/session` after the 18+ and consent checkboxes and set as an `httpOnly`, `Secure`, `SameSite=Lax` cookie `ss_sid`. It moves out of the request body from the spec's sketch because it's the bearer secret for "delete my conversation", and page scripts shouldn't read it.
+The session id is created by the first `POST /api/turn` (the one carrying `start` with the 18+ and consent answers) and set as an `httpOnly`, `Secure`, `SameSite=Lax` cookie `ss_sid`. Stage, turn count, the `elevated` lock, `being_harmed` and `handoff` all live in this row, never in what the client sends, so editing `sessionStorage` can't clear a handoff. It moves out of the request body from the spec's sketch because it's the bearer secret for "delete my conversation", and page scripts shouldn't read it.
 
 ### audit_events
 
@@ -451,6 +573,7 @@ create table audit_events (
   id                bigint generated always as identity primary key,
   at                timestamptz not null default now(),
   session_id        uuid not null,             -- no FK: survives purges
+  reviewer_hash     text not null,             -- HMAC of the email
   turn              int  not null,
   stage_in          text not null,
   stage_out         text not null,
@@ -475,6 +598,7 @@ create table audit_events (
 );
 create index on audit_events (at);
 create index on audit_events (session_id);
+create index on audit_events (reviewer_hash, at);
 ```
 
 No column can hold message text: every field is an enum, a number, an id or a name from a fixed list. Kept 90 days.
@@ -483,9 +607,8 @@ No column can hold message text: every field is an enum, a number, an id or a na
 
 ```sql
 create table limits (
-  bucket       text not null,        -- 'conv:<iphash>',
-                                     -- 'turn:<iphash>', 'spend:global'
-  window_start timestamptz not null, -- IST day, or hour for 'turn:'
+  bucket       text not null,        -- see the bucket table below
+  window_start timestamptz not null, -- start of the bucket's window
   amount       numeric not null default 0,
   primary key (bucket, window_start)
 );
@@ -501,6 +624,15 @@ returns boolean language sql as $$
   returning true;
 $$;  -- null result = cap hit
 ```
+
+| bucket | window | cap | checked by |
+|---|---|---|---|
+| `login:<iphash>` | 15 minutes | 10 attempts | `/api/login`, before the key check |
+| `conv:ip:<iphash>`, `conv:r:<reviewerhash>` | IST day | 5 conversations each | `startConversation` |
+| `turn:ip:<iphash>`, `turn:r:<reviewerhash>` | hour | 30 turns each | `startTurn` |
+| `spend:global` | IST day | $5 | `startTurn`, `addSpend` |
+
+Each turn and conversation counts against both the IP and the reviewer, so neither sharing one key across many IPs nor many reviewers behind one office IP gets past the caps.
 
 One upsert both checks and increments, so two concurrent turns can't both slip under a cap. Spend is checked at turn start (`p_add = 0`, cap $5) and added after each turn, so the day can overshoot by the cost of the turns in flight, a few cents at most.
 
@@ -521,7 +653,7 @@ create table transcripts (
 create index on transcripts (expires_at);
 ```
 
-Writes go through an `append_transcript` function that inserts only when `sessions.transcript_consent` is true for that id, so consent is enforced in the database as well as in the core. "Delete my conversation" (`DELETE /api/transcript`) removes the transcript rows and the session row and clears the cookie.
+Writes go through an `append_transcript` function that inserts only when `sessions.transcript_consent` is true for that id, so consent is enforced in the database as well as in the core. "Delete my conversation" (`DELETE /api/conversation`) removes the transcript rows and the session row, clears `ss_sid`, and returns 204 whether or not anything was stored.
 
 ### catalogue
 
@@ -580,17 +712,17 @@ All JSON, parsed with zod by `config/index.ts` at module load, so a bad file fai
 
 | file | holds |
 |---|---|
-| `config/crisis-lines.json` | name, number, hours, `when` (`always` or `being_harmed`), source URL, check date |
+| `config/crisis-lines.json` | `id`, `label`, `number`, `telHref`, `note`, `sourceUrl`, `checkedAt`, plus `when` (`always` or `being_harmed`); baked into the page at build |
 | `config/risk-keywords.json` | patterns with id, language, tier; exclusion patterns |
 | `config/thresholds.json` | Jev tier and yes/no thresholds, needs "enough" p, `understand` max turns, length caps per stage |
 | `config/help-rules.json` | the rules table |
-| `config/limits.json` | 20 turns, 1,000 chars, 5 conversations/day, 30 turns/hour, $5/day |
+| `config/limits.json` | 20 turns, 1,000 chars, 5 conversations/day and 30 turns/hour per IP and per reviewer, 10 logins per 15 min per IP, 7-day login, $5/day |
 | `config/prices.json` | USD per 1M input and output tokens per provider and model (Jev: $0.042 input, $0 output), source URL, check date |
 | `config/providers.json` | chat order, model id per provider, per-call timeout; Jev model pinned to `jev-1.14.0` |
 | `config/stock-lines.json` | stock line and handoff text per stage, English and Hinglish |
 | `prompts/<stage>.md` | stage system prompts |
 
-Secrets stay in env only, by name: `OPEN_ROUTER`, `GOOGLE_STUDIO`, `ALIBABA_KEY`, `TYPESAFE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `IP_HASH_SECRET`, `HISTORY_MAC_SECRET`, `LLM_LOCAL_CLI`.
+Secrets stay in env only, by name: `OPEN_ROUTER`, `GOOGLE_STUDIO`, `ALIBABA_KEY`, `TYPESAFE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `IP_HASH_SECRET`, `HISTORY_MAC_SECRET`, `DEMO_ACCESS_KEY`, `AUTH_COOKIE_SECRET`, `EMAIL_HASH_SECRET`, `LLM_LOCAL_CLI`. Rotating `DEMO_ACCESS_KEY` signs everyone out; rotating `EMAIL_HASH_SECRET` resets per-reviewer history, so it stays fixed unless it leaks.
 
 ## folder layout
 
@@ -608,9 +740,10 @@ src/
                         audit.ts  transcripts.ts  client.ts
     memory/             in-memory versions of every store, for evals
   composition/          deployed.ts  local.ts
-  app/                  page.tsx  evals/page.tsx
-    api/                session/route.ts  turn/route.ts
-                        transcript/route.ts
+  app/                  page.tsx  login/page.tsx  evals/page.tsx
+    api/                login/route.ts  turn/route.ts
+                        conversation/route.ts
+    lib/                reviewer.ts  (requireReviewer, cookie)
 config/  prompts/  catalogue/  scripts/  supabase/migrations/
 evals/
   cases/                risk.json  recommendation.json  redteam.json
@@ -648,7 +781,7 @@ User turns are fixed scripts, not a simulated user, so two runs differ only by t
 | A8 | Thresholds on Jev's probabilities, applied in code | The controller tunes recall against precision; Jev's top choice doesn't decide. |
 | A9 | "Enough" is a rule over the needs record's probabilities | Stage changes stay in code, as in spec 3a. |
 | A10 | Additive JSON rules table; its output narrows the tool's `helpType` enum per turn | The model can't search outside what the rules picked. |
-| A11 | No token streaming | The filter must see the whole reply first. |
+| A11 | SSE with `status` phases and one `final`; no token streaming | The filter must see the whole reply first, and the phases still show the turn is moving. |
 | A12 | Jev risk and needs in parallel; chat waits for risk | Saves a round trip without letting the model run before the gate. |
 | A13 | `handoff` is fixed config text, no model calls | The crisis path can't fail on a provider outage. |
 | A14 | Fail over on every provider error; one JSON repair; no plain retry | The user is waiting, and the next provider is an independent path. |
@@ -668,6 +801,15 @@ User turns are fixed scripts, not a simulated user, so two runs differ only by t
 | A28 | One Jev request per port method, all its questions batched | TypeSafe evaluates batched questions in parallel; per their cookbook, batching was 12x cheaper and 10x faster than one call per question. |
 | A29 | Concerns as one Noul each; other fields as a Choice with `not_stated` | A person can have two concerns, and a missing fact is reported instead of guessed. |
 | A30 | `imminent` first in the tier Choice; both orders run in the risk suite | Jev leans to the first option, so the order favours recall, and the suite shows by how much. |
+| A31 | Reviewer login: any email plus one shared key in `DEMO_ACCESS_KEY` (Lokesh, overrides spec 5a) | Reviewers get in with no accounts, and Lokesh controls access with one secret. |
+| A32 | Signed 7-day cookie whose signing key derives from the access key | Rotating the key revokes every cookie at once, with no session store. |
+| A33 | Keyed HMAC of the email, not date-folded; the email itself never stored | Per-reviewer limits and audit work across days without holding personal data. |
+| A34 | Login limited to 10 attempts per 15 min per IP, counted before the check | The shared key can't be brute-forced. |
+| A35 | `requireReviewer()` called explicitly in each route, not middleware | Same runtime as the routes, visible in each handler, unit-testable. |
+| A36 | The first `/api/turn` (with `start`) creates the session; no separate session endpoint | One fewer call for the UI, and the conversation limit is counted where the conversation begins. |
+| A37 | `final.trace` mirrors the audit event | The "under the hood" row shows reviewers the gates working without exposing text or needs values. |
+| A38 | `being_harmed` is sticky in the session row | Once disclosed, 181 stays on screen even if later turns don't repeat it. |
+| A39 | Crisis lines baked in at build | The login and intake screens show them with no request that could fail. |
 
 ## open items
 
