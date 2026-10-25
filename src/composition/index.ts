@@ -5,7 +5,7 @@ import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import type { ChatModel, SessionStore } from "@/core/ports";
 import { ProviderChain } from "@/adapters/chat/chain";
-import { OpenRouterProvider } from "@/adapters/chat/openrouter";
+import { OpenAICompatibleProvider } from "@/adapters/chat/openai-compatible";
 import type { ChatProvider } from "@/adapters/chat/provider";
 import { MemorySessionStore } from "@/adapters/memory/sessions";
 import { SupabaseSessionStore } from "@/adapters/supabase/sessions";
@@ -37,13 +37,12 @@ async function build(): Promise<Deps> {
     turnDeadlineMs = LOCAL_CLI_DEADLINE_MS;
   } else {
     const providers: { provider: ChatProvider; timeoutMs: number }[] = [];
+    const keyEnv = { openrouter: "OPEN_ROUTER", google: "GOOGLE_STUDIO", alibaba: "ALIBABA_KEY" } as const;
     for (const p of config.providers.chat) {
-      if (p.id === "openrouter" && process.env.OPEN_ROUTER) {
-        providers.push({ provider: new OpenRouterProvider(p.model, process.env.OPEN_ROUTER), timeoutMs: p.timeoutMs });
-      }
-      // Google AI Studio and Alibaba adapters arrive in step 6.
+      const key = process.env[keyEnv[p.id]];
+      if (key) providers.push({ provider: new OpenAICompatibleProvider(p.id, p.model, key), timeoutMs: p.timeoutMs });
     }
-    if (providers.length === 0) throw new Error("no chat provider configured: set OPEN_ROUTER");
+    if (providers.length === 0) throw new Error("no chat provider configured: set a provider key");
     chat = new ProviderChain(providers);
   }
 

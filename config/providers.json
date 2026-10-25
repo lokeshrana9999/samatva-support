@@ -1,6 +1,11 @@
 {
   "chat": [
     {
+      "id": "google",
+      "model": "gemini-3.5-flash-lite",
+      "timeoutMs": 8000
+    },
+    {
       "id": "openrouter",
       "model": "anthropic/claude-haiku-5.5",
       "timeoutMs": 8000

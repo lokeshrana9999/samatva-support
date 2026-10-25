@@ -1,20 +1,26 @@
-// OpenRouter through its OpenAI-compatible chat completions endpoint, in JSON
-// mode. zod validates the action either way; one repair call on a bad shape.
+// Any provider with an OpenAI-compatible chat completions endpoint (OpenRouter,
+// Google AI Studio, Alibaba Model Studio), in JSON mode. zod validates the
+// action either way; one repair call on a bad shape.
 import { parseAction } from "@/core/action";
 import type { ChatMsg, Usage } from "@/core/ports";
 import { ProviderError, type ChatProvider, type ProviderRequest } from "./provider";
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+export const ENDPOINTS = {
+  openrouter: "https://openrouter.ai/api/v1/chat/completions",
+  google: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  alibaba: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+} as const;
+
+export type CompatId = keyof typeof ENDPOINTS;
 
 type Completion = {
   choices?: { message?: { content?: string | null } }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
 };
 
-export class OpenRouterProvider implements ChatProvider {
-  readonly id = "openrouter";
-
+export class OpenAICompatibleProvider implements ChatProvider {
   constructor(
+    readonly id: CompatId,
     readonly model: string,
     private readonly apiKey: string,
   ) {}
@@ -22,13 +28,13 @@ export class OpenRouterProvider implements ChatProvider {
   private async post(messages: ChatMsg[], req: ProviderRequest): Promise<{ text: string; usage: Usage }> {
     let res: Response;
     try {
-      res = await fetch(ENDPOINT, {
+      res = await fetch(ENDPOINTS[this.id], {
         method: "POST",
         signal: req.signal,
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
-          "X-Title": "samatva-support",
+          ...(this.id === "openrouter" ? { "X-Title": "samatva-support" } : {}),
         },
         body: JSON.stringify({
           model: this.model,
@@ -36,22 +42,24 @@ export class OpenRouterProvider implements ChatProvider {
           temperature: req.temperature,
           max_tokens: req.maxTokens,
           response_format: { type: "json_object" },
-          usage: { include: true },
+          // OpenRouter reports the call's cost in `usage` when asked.
+          ...(this.id === "openrouter" ? { usage: { include: true } } : {}),
         }),
       });
     } catch (e) {
-      if (req.signal.aborted) throw new ProviderError("timeout", "OpenRouter call timed out");
-      throw new ProviderError("network", `OpenRouter unreachable: ${(e as Error).message}`);
+      if (req.signal.aborted) throw new ProviderError("timeout", `${this.id} call timed out`);
+      throw new ProviderError("network", `${this.id} unreachable: ${(e as Error).message}`);
     }
-    if (res.status === 429) throw new ProviderError("rate_limited", "OpenRouter 429");
-    if (res.status === 401 || res.status === 403) throw new ProviderError("auth", `OpenRouter ${res.status}`);
-    if (res.status >= 500) throw new ProviderError("server", `OpenRouter ${res.status}`);
-    if (!res.ok) throw new ProviderError("bad_request", `OpenRouter ${res.status}`);
+    if (res.status === 429) throw new ProviderError("rate_limited", `${this.id} 429`);
+    if (res.status === 401 || res.status === 402 || res.status === 403) {
+      throw new ProviderError("auth", `${this.id} ${res.status}`);
+    }
+    if (res.status >= 500) throw new ProviderError("server", `${this.id} ${res.status}`);
+    if (!res.ok) throw new ProviderError("bad_request", `${this.id} ${res.status}`);
 
     const body = (await res.json()) as Completion;
-    const text = body.choices?.[0]?.message?.content ?? "";
     return {
-      text,
+      text: body.choices?.[0]?.message?.content ?? "",
       usage: {
         inputTokens: body.usage?.prompt_tokens ?? 0,
         outputTokens: body.usage?.completion_tokens ?? 0,
