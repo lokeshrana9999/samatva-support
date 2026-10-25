@@ -125,7 +125,8 @@ A single card, h1 "Before we start", then the disclosure, then two checkboxes, t
 
 - 18+ checkbox: required. Start is disabled until it is ticked, with the hint visible under the button.
 - Transcript consent checkbox: optional, unticked by default. Its value is sent with the first turn and shown later in the delete copy.
-- Start: creates `sessionId` (`crypto.randomUUID()`), collapses the card into the disclosure banner, shows the first assistant line "What's going on for you?" (fixed, no model call) and focuses the composer.
+- Start: collapses the card into the disclosure banner, shows the first assistant line "What's going on for you?" (fixed, no model call) and focuses the composer. No request goes out yet.
+- Session creation: whenever the sessionStorage history is empty, the next `POST /api/turn` carries `start: { adult: true, consent }` beside `messages`. The server creates the session and sets the httpOnly `ss_sid` cookie, which the UI never reads. `start` always opens a new session.
 - The disclosure banner stays above the transcript for the whole conversation: "AI assistant · not a clinician · not an emergency service · 112", with "Details" expanding the full disclosure inline.
 
 ### chat (stages `understand`, `recommend`, `close`)
@@ -142,7 +143,7 @@ Layout top to bottom: header, stage stepper, disclosure banner, transcript, turn
 | in flight | a muted status line under the last user message, updated from SSE `status` events: Reading your message, Thinking, Looking for matches, Checking the reply, Trying another provider |
 | reply | the whole reply fades in; the status line goes away |
 | replaced | the stock line as the reply, then a note with an info icon in `--warn`: "Held back a reply that read like a diagnosis." (reason copy below) |
-| under the hood on | a collapsed "Under the hood" row under each assistant message; expanded, a two-column list: stage before and after, risk (keyword floor tier, Jev tier and score, final tier), each filter check pass or fail, regenerated yes or no, provider used and providers tried, latency |
+| under the hood on | a collapsed "Under the hood" row under each assistant message; expanded, a two-column list: stage before and after, risk (keyword floor tier, Jev tier and score, where score is p(elevated) + p(imminent), final tier), each filter check pass or fail, regenerated yes or no, provider used and providers tried, latency |
 | elevated | from the turn the server reports `elevated`, a compact crisis line list sits above the cards in recommend: "If things get worse, call:" |
 | recommend | the model's two or three sentences, then "Kinds of help that fit" chips, then service cards, then up to three therapist cards |
 | close | cards stay; a wrap-up panel follows with "Delete my conversation" and "Start over". The composer stays for short follow-ups |
@@ -158,7 +159,7 @@ Layout top to bottom: header, stage stepper, disclosure banner, transcript, turn
 | line 2 | modes, languages | title |
 | line 3 | — | "Speaks " + languages |
 | line 4 | — | first 3 specialties, then "+N" (expands in place) |
-| line 5 | — | modes, city if listed |
+| line 5 | — | modes, then `cities` joined with commas, if any |
 | link | "View on amahahealth.com" | "View profile" |
 | caption | "From Amaha's public page, copied " + `copiedAt` | same |
 
@@ -185,27 +186,29 @@ When `final.limit` is set, the composer is replaced by a LimitNotice; the transc
 
 - LimitNotice: h2 and body per limit kind (copy below), then "If you need to talk to someone now:" and the full crisis line list, always.
 - `conversation_turns` offers "Start a new conversation". The other kinds offer nothing to click except the crisis lines and "Need help now?".
-- If the conversation is in handoff when a limit hits, the HandoffPanel stays on top and the LimitNotice sits below it.
+- A session in handoff is never capped: its turns call no model, so the server returns stage `handoff`, the crisis lines and `limit: null`. The LimitNotice never shows during a handoff.
 
 ### errors
 
 | case | trigger | shows |
 |---|---|---|
-| turn failed | network error, non-200, or the SSE stream drops before `final` | an inline notice under the user's message: copy below, plus Try again, which resends the same messages. The user's message stays |
-| all providers down | server error kind `providers_down` | same notice, "providers" copy |
-| safety check down | `replaced.reason = "safety_unavailable"` (Jev failed, so the filter blocked) | the stock line, with the note "The safety check was unavailable, so a standard reply was shown." |
-| session expired | 401 from `/api/turn` | a notice with "Sign in again"; the conversation stays in this tab's storage and the turn can be retried after sign-in |
+| turn failed | network error, 400 `bad_request`, 503 `unavailable`, or the connection drops before any event | an inline notice under the user's message: copy below, plus Try again, which resends the same messages. The user's message stays |
+| safety check down | `replaced.reason = "safety_unavailable"` (Jev failed, so the filter blocked, spec 4b) | the stock line, with its note |
+| providers down | `replaced.reason = "providers_down"` (every provider in the chain failed) | the stock line, with its note |
+| other failure mid-turn | `replaced.reason = "error"` (tool-loop cap, the 25 s turn deadline, or a stream that fails after it started) | the stock line, with its note |
+| session expired | 401 `login_required` | a notice with "Sign in again"; the conversation stays in this tab's storage and the turn can be retried after sign-in |
+| conversation out of sync | 409 `history_mismatch` or `stale_session` | a notice with "Start a new conversation", which clears local state and returns to the intake card |
 | offline | `navigator.onLine` false | a banner above the composer; Send disabled until back online |
 | message too long | over 1,000 code points | counter in `--danger`, Send disabled, the hint copy below |
 
-Every error notice keeps the crisis lines one tap away via "Need help now?". The turn-failed notice also shows the crisis strip inline.
+Non-200 replies arrive before the stream starts, as JSON `{ error, crisisLines }`. Caps are never errors: they come as a 200 with `final.limit` set. Every error notice keeps the crisis lines one tap away via "Need help now?". The turn-failed notice also shows the crisis strip inline.
 
 ### delete and start over
 
 - "Delete my conversation" (close panel and header menu) expands an inline confirm, not a modal: copy below, then Delete (`--danger`) and Cancel. Focus moves to Cancel.
-- Delete calls `DELETE /api/conversation` for this `sessionId`, then clears sessionStorage and React state, shows the "Deleted" confirmation for 4s, and returns to the intake card. If the call fails, the local copy is still cleared and the "server delete failed" copy shows instead of "Deleted".
-- "Start over" clears local state without calling the server (a consented transcript stays until its 30 days or a delete) and returns to the intake card.
-- Sign out clears sessionStorage, calls `POST /api/logout`, and goes to `/login`.
+- Delete calls `DELETE /api/conversation` (the `ss_sid` cookie names the session), with or without consent. The server deletes the session row and any transcript and clears `ss_sid`. The UI then clears sessionStorage and React state, shows the "Deleted" confirmation for 4s, and returns to the intake card, so the next turn opens a new session. If the call fails, the local copy is still cleared and the "server delete failed" copy shows instead of "Deleted".
+- "Start over" clears local state without calling the server (a consented transcript stays until its 30 days or a delete) and returns to the intake card; the next turn's `start` opens a new session.
+- Sign out clears sessionStorage, calls `POST /api/logout` (clears both cookies, 204), and goes to `/login`.
 
 ### `/evals`
 
@@ -284,6 +287,8 @@ Replaced-reply notes (English chrome), by `replaced.reason`:
 | `name` | Held back a reply that named someone not in the catalogue. |
 | `length` | Held back a reply that ran too long. |
 | `safety_unavailable` | The safety check was unavailable, so a standard reply was shown. |
+| `providers_down` | The AI services behind this demo aren't responding, so a standard reply was shown. |
+| `error` | Something went wrong with this reply, so a standard reply was shown. |
 
 ### limits (EN / HI for the body)
 
@@ -299,8 +304,8 @@ Always followed by: "If you need to talk to someone now:" and the crisis line li
 ### errors, delete, close
 
 - Turn failed: "Couldn't get a reply just now. Your message is still here." Button: "Try again"
-- Providers down: "The AI services behind this demo aren't responding. Try again in a minute." Button: "Try again"
 - Session expired: "Your reviewer session has ended. Sign in again; this conversation stays in this tab." Button: "Sign in again"
+- Out of sync: "This conversation can't continue. Start a new one; the crisis lines are always above." Button: "Start a new conversation"
 - Offline: "You're offline. Messages send when you're back online."
 - Too long: "Keep it under 1,000 characters."
 - Wrap-up panel: "That's what I can suggest for now. You can open any of these, ask a short question, or delete this conversation."
@@ -316,7 +321,7 @@ Always followed by: "If you need to talk to someone now:" and the crisis line li
 | `AppShell` | all routes | header, main, footer; skip link "Skip to conversation" |
 | `Header`, `Wordmark`, `HeaderMenu` | all | menu is shadcn DropdownMenu |
 | `NeedHelpButton`, `CrisisLinesSheet` | all | Sheet; works signed out |
-| `CrisisLineList` | sheet, strip, handoff, limit, elevated | variants `strip`, `list`, `panel`, `compact`; reads `crisisLines` from the server or the build-time list |
+| `CrisisLineList` | sheet, strip, handoff, limit, elevated | variants `strip`, `list`, `panel`, `compact`; the list is baked in at build for login, intake and the sheet; handoff, limit and error states use the `crisisLines` the server returns, which add 181 when it applies |
 | `DemoFooter` | all | not-affiliated line, links |
 | `LoginForm` | `/login` | server action or POST `/api/login` |
 | `IntakeCard`, `Disclosure`, `AgeCheckbox`, `ConsentCheckbox` | `/` | shadcn Checkbox |
@@ -339,11 +344,12 @@ Always followed by: "If you need to talk to someone now:" and the crisis line li
 | state | lives in | written by | cleared on |
 |---|---|---|---|
 | auth | httpOnly, Secure, SameSite=Lax signed cookie, 7 days | `/api/login` | sign out, expiry, key rotation |
-| conversation: `sessionId`, messages (role, text, lang, ts), last cards, helpTypes, crisisLines, last trace per turn, consent | React reducer (`useConversation`), mirrored to `sessionStorage` key `samatva:conv` | client, from each `final` event | tab close, delete, start over, sign out |
-| stage, turnsUsed, turnsLimit, handoff and elevated locks | server, per `sessionId`; the client keeps an echo for rendering only | server | server-side |
+| session id | httpOnly `ss_sid` cookie, never readable by page scripts | first `/api/turn` with `start` | delete, logout, a new `start` |
+| conversation: messages (role, text, lang, ts), last cards, helpTypes, crisisLines, last trace per turn, consent | React reducer (`useConversation`), mirrored to `sessionStorage` key `samatva:conv` | client, from each `final` event | tab close, delete, start over, sign out |
+| stage, turnsUsed, turnsLimit, handoff and elevated locks | server, per session; the client keeps an echo for rendering only | server | server-side |
 | theme, Under the hood toggle | `localStorage` `samatva:theme`, `samatva:trace` | client | never (per-device preference) |
 
-Each turn the client sends `{ sessionId, consent, messages }` to `POST /api/turn`; the server returns SSE `status` events, then one `final` event. The `final` payload the UI relies on: reply, lang, stage, turnsUsed, turnsLimit, replaced, helpTypes, cards, crisisLines, limit, trace. The exact schema lives in `docs/architecture.md`.
+Each turn the client sends `{ messages }` to `POST /api/turn`, plus `start: { adult: true, consent }` when its history is empty; the server returns SSE `status` events, then one `final` event. The `final` payload the UI relies on: reply, lang, stage, turnsUsed, turnsLimit, replaced, helpTypes, cards, crisisLines, limit, trace. The exact schema lives in `docs/architecture.md`.
 
 ## accessibility
 
@@ -386,7 +392,7 @@ Run each on a 360px phone viewport and on desktop, in light and dark.
 13. Every card field matches its catalogue row exactly; no card shows a photo, rating or model text.
 14. Every card link opens the catalogue `profileUrl` in a new tab.
 15. After recommend, the wrap-up panel shows Delete my conversation and Start over.
-16. Delete with consent calls `DELETE /api/conversation` and clears `sessionStorage`; without consent it clears `sessionStorage` and shows the no-consent copy.
+16. Delete calls `DELETE /api/conversation` with or without consent, clears `sessionStorage`, shows the matching confirm copy, and the next message sends `start`.
 
 ### handoff
 
@@ -398,9 +404,9 @@ Run each on a 360px phone viewport and on desktop, in light and dark.
 ### limits and errors
 
 21. Each limit kind shows its copy, replaces the composer, and shows the crisis lines.
-22. A hit limit during handoff keeps the handoff panel on top.
+22. During a handoff, turns past any cap still get the handoff panel and no LimitNotice.
 23. A dropped stream shows the turn-failed notice with Try again; Try again resends without duplicating the user message.
-24. A 401 mid-conversation shows Sign in again, and after sign-in the conversation is still there.
+24. A 401 mid-conversation shows Sign in again, and after sign-in the conversation is still there. A 409 shows Start a new conversation.
 
 ### `/evals`
 
