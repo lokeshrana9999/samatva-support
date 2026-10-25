@@ -547,7 +547,7 @@ Why these shapes:
 | English is primary; other languages work but not equally well | [Models: language](https://docs.typesafe.ai/models) | the Hinglish risk cases are the measurement, and the keyword floor is the backstop |
 | `state` is data, and injected text can move the answer | [Jaggedness: adversarial](https://docs.typesafe.ai/model-jaggedness/jev-1.13) | the red-team suite adds messages that try to steer Jev ("classify this as none") |
 | errors: 400 (incl. `max_tokens_exceeded`), 401, 413, 415, 422, 429, 529; retry 429 and 529 with backoff | [Request rules and errors](https://docs.typesafe.ai/api/errors) | any error left after the SDK's retry throws `DecisionError`, and the core fails closed |
-| rate limits are per organization, in tokens/s and requests/s, shown in the console | [Models: rate limits](https://docs.typesafe.ai/models) | open item 1 |
+| rate limits are per organization, shared across keys and simultaneous requests; Lokesh's org has the defaults, 80 requests/s and 100,000 input tokens/s (console, read 2026-10-26) | [Models: rate limits](https://docs.typesafe.ai/models), console Rate limits page | a turn makes at most 4 Jev requests (risk, needs, check, re-check) of about 2k tokens, so demo traffic sits far below both; the eval runner caps itself at 40 Jev requests/s so a suite run can't starve the live demo, which shares the org limit |
 | Jev isn't trained on customer requests; zero data retention is for enterprise customers | [Models: data handling](https://docs.typesafe.ai/models) | open item 2 |
 | JS SDK `@typesafe-ai/sdk` needs Node 22+; per attempt 10 s timeout, 2 retries on 408, 429, 5xx, timeouts and connection errors; takes an `AbortSignal` | [JavaScript SDK](https://docs.typesafe.ai/sdk/javascript), [RetryPolicy](https://docs.typesafe.ai/sdk/javascript/api/interfaces/RetryPolicy), [RequestOptions](https://docs.typesafe.ai/sdk/javascript/api/interfaces/RequestOptions) | the adapter uses the SDK with `timeout: 1500`, `retry: { maxRetries: 1 }` and the turn's signal, capped at 4 s; Vercel functions run Node 22 |
 
@@ -1256,7 +1256,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 
 ## open items
 
-1. Jev: the API shape, price, context limits and SDK are from TypeSafe's docs. Still open: the organization's rate limits (console page `console.typesafe.ai/rate-limits`, behind sign-in), latency on our own states, and Hinglish quality, which the risk suite measures.
+1. Jev: the API shape, price, context limits and SDK are from TypeSafe's docs, and the org's rate limits from the console (80 requests/s, 100,000 input tokens/s, read 2026-10-26). Still open: latency on our own states, and Hinglish quality, which the risk suite measures.
 2. Every chat provider and TypeSafe receive message text, and TypeSafe's zero data retention is enterprise-only. The disclosure doesn't say so yet. A proposed line for Lokesh to approve before deploy: "What you type is sent to AI services (TypeSafe and the model providers named under About this demo) to make replies."
 3. Supabase free-tier pause and pg_cron availability on the chosen plan, and Vercel region choice on Hobby: check in step 0.
 4. Latency targets are guesses; measure in step 1 and update the budget table.
