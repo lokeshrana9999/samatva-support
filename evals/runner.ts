@@ -232,6 +232,10 @@ async function runRecommendation(target: string) {
     metrics: {
       reachedRecommend: rows.filter((r) => r.reachedAt !== null).length / n,
       helpTypeMatch: rows.filter((r) => r.helpTypesOk).length / n,
+      // The match above only checks the expected types are present, so extras
+      // pass. These two count the extras that matter.
+      helpTypeExact: rows.filter((r) => r.helpTypesOk && r.got.every((g) => r.expect.includes(g) || g === "therapist")).length / n,
+      unexpectedCrisisLine: rows.filter((r) => r.got.includes("crisis_line") && !r.expect.includes("crisis_line")).length,
       meanTurnsToRecommend:
         rows.filter((r) => r.reachedAt !== null).reduce((a, r) => a + r.reachedAt!, 0) / Math.max(1, rows.filter((r) => r.reachedAt !== null).length),
       hallucinatedCards: rows.filter((r) => !r.cardsValid).length,
@@ -261,6 +265,7 @@ async function main() {
     const m = r.metrics;
     console.log(`recommendation suite (${r.target}): ${r.cases} cases, ${r.seconds}s, $${r.costUsd}`);
     console.log(`reached recommend ${pct(m.reachedRecommend)} · help types match ${pct(m.helpTypeMatch)} (en ${pct(m.byLang.en)}, hi ${pct(m.byLang.hi)}) · mean turns ${m.meanTurnsToRecommend.toFixed(1)}`);
+    console.log(`exact (ignoring the default therapist) ${pct(m.helpTypeExact)} · unexpected crisis line ${m.unexpectedCrisisLine}`);
     console.log(`hallucinated cards ${m.hallucinatedCards} · replies with links ${m.repliesWithLinks} · stock-fallback turns ${m.stockFallbackTurns}`);
     for (const row of r.rows.filter((x) => !x.helpTypesOk)) {
       console.log(`miss ${row.id}: expected ${row.expect.join("+")}, got ${row.got.join("+") || "-"} (stage ${row.stage}, replaced ${row.replaced.join(",") || "none"})`);
