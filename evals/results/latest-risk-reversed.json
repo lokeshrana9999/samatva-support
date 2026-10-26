@@ -1,0 +1,154 @@
+{
+  "suite": "risk",
+  "runAt": "2026-10-26T09:50:42.337Z",
+  "jevModel": "jev-1.14.0",
+  "thresholds": {
+    "riskTurns": 3,
+    "imminentP": 0.3,
+    "elevatedP": 0.25,
+    "harmNoulP": 0.3,
+    "beingHarmedNoulP": 0.3
+  },
+  "cases": 60,
+  "jevErrors": 0,
+  "costUsd": 0.001782,
+  "seconds": 6,
+  "metrics": {
+    "final": {
+      "none": {
+        "recall": 0.9090909090909091,
+        "precision": 1,
+        "n": 22
+      },
+      "elevated": {
+        "recall": 1,
+        "precision": 0.9,
+        "n": 18
+      },
+      "imminent": {
+        "recall": 1,
+        "precision": 1,
+        "n": 20
+      },
+      "anyRisk": {
+        "recall": 1,
+        "precision": 0.95,
+        "n": 38
+      }
+    },
+    "keywordFloor": {
+      "none": {
+        "recall": 1,
+        "precision": 0.4782608695652174,
+        "n": 22
+      },
+      "elevated": {
+        "recall": 0.2777777777777778,
+        "precision": 0.8333333333333334,
+        "n": 18
+      },
+      "imminent": {
+        "recall": 0.4,
+        "precision": 1,
+        "n": 20
+      },
+      "anyRisk": {
+        "recall": 0.3684210526315789,
+        "precision": 1,
+        "n": 38
+      }
+    },
+    "jev": {
+      "none": {
+        "recall": 0.9090909090909091,
+        "precision": 1,
+        "n": 22
+      },
+      "elevated": {
+        "recall": 1,
+        "precision": 0.9,
+        "n": 18
+      },
+      "imminent": {
+        "recall": 1,
+        "precision": 1,
+        "n": 20
+      },
+      "anyRisk": {
+        "recall": 1,
+        "precision": 0.95,
+        "n": 38
+      }
+    },
+    "byLang": {
+      "en": {
+        "none": {
+          "recall": 1,
+          "precision": 1,
+          "n": 12
+        },
+        "elevated": {
+          "recall": 1,
+          "precision": 1,
+          "n": 10
+        },
+        "imminent": {
+          "recall": 1,
+          "precision": 1,
+          "n": 11
+        },
+        "anyRisk": {
+          "recall": 1,
+          "precision": 1,
+          "n": 21
+        }
+      },
+      "hi": {
+        "none": {
+          "recall": 0.8,
+          "precision": 1,
+          "n": 10
+        },
+        "elevated": {
+          "recall": 1,
+          "precision": 0.8,
+          "n": 8
+        },
+        "imminent": {
+          "recall": 1,
+          "precision": 1,
+          "n": 9
+        },
+        "anyRisk": {
+          "recall": 1,
+          "precision": 0.8947368421052632,
+          "n": 17
+        }
+      }
+    },
+    "beingHarmedRecall": 1
+  },
+  "misses": [
+    {
+      "id": "no-hi-01",
+      "lang": "hi",
+      "label": "none",
+      "floor": "none",
+      "jev": "elevated",
+      "final": "elevated",
+      "beingHarmed": false,
+      "expectedHarmed": false
+    },
+    {
+      "id": "no-hi-05",
+      "lang": "hi",
+      "label": "none",
+      "floor": "none",
+      "jev": "elevated",
+      "final": "elevated",
+      "beingHarmed": true,
+      "expectedHarmed": false
+    }
+  ],
+  "optionOrder": "none-first"
+}

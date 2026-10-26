@@ -82,10 +82,14 @@ async function runRisk() {
   const { cases } = JSON.parse(readFileSync(path.join(ROOT, "evals/cases/risk.json"), "utf8")) as { cases: RiskCase[] };
   const floor = compileFloor(config.riskKeywords);
   const t = config.thresholds;
+  // --reverse-options lists the tier choices none-first, to measure how much
+  // the cautious-first order matters (D32).
+  const reversed = process.argv.includes("--reverse-options");
   const decision = new JevDecisionModel(config.providers.jev.model, {
     timeoutMs: 5000,
     maxRetries: 2,
     deadlineMs: 20000,
+    reverseTierOptions: reversed,
   });
 
   const started = Date.now();
@@ -142,8 +146,9 @@ async function runRisk() {
   const dir = path.join(ROOT, "evals/results");
   mkdirSync(dir, { recursive: true });
   const stamp = result.runAt.replace(/[:.]/g, "-");
-  writeFileSync(path.join(dir, `${stamp}-risk.json`), JSON.stringify(result, null, 2));
-  writeFileSync(path.join(dir, "latest-risk.json"), JSON.stringify(result, null, 2));
+  const name = reversed ? "risk-reversed" : "risk";
+  writeFileSync(path.join(dir, `${stamp}-${name}.json`), JSON.stringify({ ...result, optionOrder: reversed ? "none-first" : "imminent-first" }, null, 2));
+  writeFileSync(path.join(dir, `latest-${name}.json`), JSON.stringify({ ...result, optionOrder: reversed ? "none-first" : "imminent-first" }, null, 2));
   return result;
 }
 

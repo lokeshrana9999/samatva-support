@@ -187,6 +187,14 @@ Each step ends deployed, with the evals that exist so far passing.
 6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README.
 7. Loom outline rehearsal, record, flip the repo public.
 
+## open checks, closed 2026-10-26
+
+- 112: 112.gov.in still refuses connections from here, so the source is now an official Ministry of Home Affairs release on PIB (`PRID=1594669`), which names 112 as the pan-India single emergency number.
+- Purge jobs: all four are active in `cron.job`. `purge-transcripts` (09:07 UTC) and `purge-sessions` (09:17 UTC) have run and succeeded; the two daily jobs are due at 03:27 and 03:37 UTC.
+- Option order (design D32): the risk suite with the tier options reversed (none first) scores identically to the cautious-first order, misses included. On this set the order makes no difference. Results are in `evals/results/latest-risk-reversed.json`.
+- Live latency, 25 production turns from `audit_events`: understand p50 1.8 s, p95 3.8 s (n=21); recommend p50 5.3 s, p95 7.1 s (n=3); a Jev-detected handoff 0.28 s. That's within the design's targets, but the sample is small.
+- Screen-reader handling of `hi-Latn`: still unverified. It needs NVDA, TalkBack or VoiceOver on a real device, which can't be driven from here.
+
 ## open items
 
 - Jev's API shape, limits and Hinglish quality: settled. The API and limits come from TypeSafe's docs and console (`docs/design.md`), and Hinglish was measured by the step 2 risk suite: 100% imminent recall on 18 Hinglish cases.
