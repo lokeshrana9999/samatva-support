@@ -171,3 +171,19 @@ describe("recommend stage", () => {
     expect(final.cards).toEqual([]);
   });
 });
+
+describe("language", () => {
+  it("tells the model which language to reply in", async () => {
+    const seen: string[] = [];
+    const chat: ChatModel = {
+      async complete(req) {
+        seen.push(req.messages[0].content);
+        return { action: { reply: "What has been hardest?" }, provider: "fake", model: "fake-1", usage, providersTried: ["fake"] };
+      },
+    };
+    await runTurn(deps(chat, gate({ ...EMPTY_NEEDS })), { session: session(), messages: msgs("My partner and I keep fighting") });
+    await runTurn(deps(chat, gate({ ...EMPTY_NEEDS })), { session: session(), messages: msgs("mujhe bahut stress ho raha hai") });
+    expect(seen[0]).toContain("English only");
+    expect(seen[1]).toContain("Hinglish in roman script, as the user writes");
+  });
+});

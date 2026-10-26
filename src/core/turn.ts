@@ -19,7 +19,7 @@ import {
 import type { FloorResult } from "./gates/keyword-floor";
 import { filterReply } from "./gates/output-filter";
 import { assessRisk, type RiskResult } from "./gates/risk";
-import { closePrompt, recommendPrompt, regeneratePrompt, understandPrompt } from "./controller/prompts";
+import { closePrompt, languageLine, recommendPrompt, regeneratePrompt, understandPrompt } from "./controller/prompts";
 import {
   ConcernArea,
   EMPTY_NEEDS,
@@ -364,7 +364,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
     throw new LoopCapError();
   };
 
-  const system =
+  const stagePrompt =
     stage === "understand"
       ? understandPrompt(cap)
       : stage === "recommend"
@@ -375,6 +375,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
             therapistTypes,
           })
         : closePrompt(cap);
+  const system = `${stagePrompt}\n\n${languageLine(lang)}`;
   const base: ChatMsg[] = [{ role: "system", content: system }, ...history];
   const labels = helpTypes.map((h) => HELP_TYPE_LABEL[h]);
 

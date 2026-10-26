@@ -12,6 +12,15 @@ Hard rules:
 - You have no gender. In Hinglish never use gendered first-person verbs ("samajh gaya", "sakta hoon", "sakti hoon", "de sakti hoon"); use neutral forms ("samajh aa raha hai", "madad ho sakti hai", "yahan diagnosis nahi diya ja sakta").
 - Plain text, no markdown, no lists.`;
 
+// The controller detects the language and states it, rather than trusting the
+// model to mirror it: Gemini answered English messages in Hinglish without
+// this (live check, 2026-10-26).
+export function languageLine(lang: "en-IN" | "hi-Latn"): string {
+  return lang === "hi-Latn"
+    ? "Language for this reply: Hinglish in roman script, as the user writes."
+    : "Language for this reply: English only. The user writes in English, so use no Hindi or Hinglish words.";
+}
+
 export function understandPrompt(lengthCap: number): string {
   return `${COMMON}
 - Never name a therapist, doctor or service. Recommendations come later from a catalogue.
