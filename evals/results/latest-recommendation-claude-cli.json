@@ -1,23 +1,25 @@
 {
   "suite": "recommendation",
   "target": "claude-cli",
-  "runAt": "2026-10-26T07:37:19.165Z",
-  "cases": 24,
-  "costUsd": 0.00737,
-  "seconds": 1502,
+  "runAt": "2026-10-26T11:53:05.791Z",
+  "cases": 31,
+  "costUsd": 0.017639,
+  "seconds": 2196,
   "metrics": {
     "reachedRecommend": 1,
     "helpTypeMatch": 1,
-    "meanTurnsToRecommend": 2.0833333333333335,
+    "helpTypeExact": 0.7741935483870968,
+    "unexpectedCrisisLine": 3,
+    "meanTurnsToRecommend": 2.935483870967742,
     "hallucinatedCards": 0,
     "repliesWithLinks": 0,
-    "stockFallbackTurns": 0,
+    "stockFallbackTurns": 1,
+    "transitionCases": 7,
+    "transitionOk": 1,
     "byLang": {
       "en": 1,
       "hi": 1
-    },
-    "helpTypeExact": 0.8333333333333334,
-    "unexpectedCrisisLine": 3
+    }
   },
   "rows": [
     {
@@ -30,15 +32,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-01",
+        "t-04",
         "t-05"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-02",
@@ -53,16 +67,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-14",
-        "t-02",
-        "t-05"
+        "t-07",
+        "t-02"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-03",
@@ -75,15 +100,30 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-09",
-        "t-10"
+        "t-04",
+        "t-08",
+        "svc-therapy",
+        "svc-couples"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [
+        "error"
+      ],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-04",
@@ -96,15 +136,26 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "svc-self-care",
-        "svc-therapy"
+        "svc-find"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-05",
@@ -117,15 +168,26 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "svc-psychiatry",
-        "svc-therapy"
+        "t-12",
+        "t-06"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-06",
@@ -137,16 +199,26 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-02",
-        "t-05",
-        "t-08"
+        "t-01",
+        "t-06"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-07",
@@ -159,16 +231,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-08",
-        "t-12",
-        "t-01"
+        "t-01",
+        "t-02"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-08",
@@ -180,7 +263,7 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-06",
@@ -188,7 +271,18 @@
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-09",
@@ -203,15 +297,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "svc-psychiatry",
-        "svc-therapy"
+        "t-02",
+        "t-05",
+        "t-03"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-10",
@@ -223,7 +329,7 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-05",
@@ -232,7 +338,18 @@
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-11",
@@ -244,15 +361,25 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-04",
-        "t-01"
+        "t-04"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-en-12",
@@ -266,15 +393,25 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-07",
-        "svc-psychiatry"
+        "t-07"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-01",
@@ -286,16 +423,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-01",
-        "t-04",
-        "t-05"
+        "t-05",
+        "t-04"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-02",
@@ -305,20 +453,33 @@
         "therapist"
       ],
       "got": [
+        "crisis_line",
         "psychiatrist",
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-14",
-        "t-07",
-        "t-02"
+        "t-02",
+        "t-05",
+        "svc-psychiatry",
+        "svc-therapy"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-03",
@@ -331,14 +492,25 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-09"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-04",
@@ -351,17 +523,26 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-01",
-        "t-04",
         "svc-self-care",
-        "svc-therapy"
+        "svc-find"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-05",
@@ -374,16 +555,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-11",
-        "t-01",
-        "t-02"
+        "t-12",
+        "t-13"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-06",
@@ -395,16 +587,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-02",
-        "t-08",
-        "t-05"
+        "t-05",
+        "t-08"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-07",
@@ -419,16 +622,26 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
-        "t-11",
-        "t-02",
-        "t-14"
+        "svc-psychiatry",
+        "svc-find"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-08",
@@ -441,18 +654,27 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-11",
-        "t-13",
         "t-01",
-        "svc-therapy",
-        "svc-psychiatry"
+        "t-05"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-09",
@@ -464,7 +686,7 @@
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
         "t-05",
@@ -473,7 +695,18 @@
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-hi-10",
@@ -482,20 +715,31 @@
         "psychiatrist"
       ],
       "got": [
-        "crisis_line",
         "psychiatrist",
         "therapist"
       ],
       "stage": "recommend",
-      "reachedAt": 2,
+      "reachedAt": 3,
       "helpTypesOk": true,
       "cards": [
+        "t-12",
         "t-01",
-        "t-05"
+        "t-13"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-mix-01",
@@ -511,11 +755,22 @@
       "helpTypesOk": true,
       "cards": [
         "t-01",
-        "t-04"
+        "t-05"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
     },
     {
       "id": "rec-mix-02",
@@ -532,11 +787,250 @@
       "cards": [
         "t-02",
         "t-05",
-        "t-08"
+        "t-08",
+        "svc-therapy",
+        "svc-find"
       ],
       "cardsValid": true,
       "replyUrls": false,
-      "replaced": []
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": false,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-en-01",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-12",
+        "t-06"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-hi-01",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-11"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-en-02",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-13",
+        "t-05"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        3
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-en-03",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 5,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-04",
+        "t-05"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "understand",
+        "understand",
+        "recommend"
+      ],
+      "recommendAt": [
+        5
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-en-04",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "close",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-03",
+        "t-01",
+        "t-04"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "understand",
+        "understand",
+        "recommend",
+        "understand",
+        "recommend",
+        "close"
+      ],
+      "recommendAt": [
+        3,
+        5
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-en-05",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 1,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "recommend"
+      ],
+      "recommendAt": [
+        1
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
+    },
+    {
+      "id": "rec-flow-hi-05",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 1,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [],
+      "stages": [
+        "recommend"
+      ],
+      "recommendAt": [
+        1
+      ],
+      "checksTransition": true,
+      "transitionOk": true,
+      "transitionFailures": []
     }
   ]
 }
