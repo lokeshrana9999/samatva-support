@@ -981,7 +981,9 @@ Reads the latest results JSON at build time; no model calls, no login (D51).
 
 ## fixed copy
 
-UI chrome is English only. Texts marked EN / HI have a Hinglish variant; the server picks one per turn by `lang` and copies the wording below into `config/stock-lines.json`. Hinglish fixed texts avoid gendered first-person verbs ("sakta" or "sakti") by using passive or third-person forms, so the AI is never given a gender. Crisis numbers are never written here: they come from config, verified against their official sources in step 1.
+UI chrome is English only. Texts marked EN / HI have a Hinglish variant; the server picks one per turn by `lang` and copies the wording below into `config/stock-lines.json`. Hinglish fixed texts give the assistant no gender: they use passive or third-person forms, or "main ... hoon" with a noun, never a gendered first-person verb ("sakta" or "sakti hoon", "bataungi"). `test/copy.test.ts` runs every Hinglish stock line through the output filter's `genderedFirstPerson`, and checks that no stock line has a link and no fixed text invites the user back. Crisis numbers are never written here: they come from config, verified against their official sources in step 1. Limit copy states the caps from `config/limits.json`, and the same test checks the numbers match.
+
+Reviewed adversarially on 2026-10-26 against the spec's rules and the code (findings in the session notes). The Hinglish is still a first draft that no fluent reviewer has read (open item 7).
 
 ### login
 
@@ -998,44 +1000,48 @@ UI chrome is English only. Texts marked EN / HI have a Hinglish variant; the ser
 >
 > I'm not an emergency service. If you might be in danger, call 112 now.
 >
-> I'll ask a few questions about what's going on, then suggest kinds of help and Amaha services and therapists that may fit. What you do next is up to you.
+> What you type is sent to AI services to write and check replies: TypeSafe and the model providers named under [About this demo](/evals#about). This happens whether or not you save the conversation.
+>
+> I'll ask a few questions about what's going on, then suggest kinds of help that may fit, with links to Amaha services and sample therapist profiles. What you do next is up to you.
 >
 > This is an independent demo by Lokesh, not affiliated with Amaha.
 
 - 18+ checkbox: "I'm 18 or older (required)"
 - Under-18 hint, shown under Start while unticked: "This demo is for adults. If you're under 18, please talk to an adult you trust, or call Tele-MANAS from the list below."
 - Consent checkbox: "Save this conversation for 30 days so Lokesh can review how the demo works (optional)"
-- Consent help text: "Saved conversations are deleted automatically after 30 days, and you can delete yours any time. If you leave this unticked, nothing you type is stored; only content-free counts, like which step you reached, are logged."
+- Consent help text: "If you tick this, your messages are saved and deleted automatically after 30 days. You can delete them sooner with "Delete my conversation", until you start a new one. If you leave it unticked, your messages aren't saved. Either way, the server keeps content-free counts, like which step you reached, and until a day after your last message a short summary used to match suggestions, like the kind of concern and city." (The summary is the needs record in the `sessions` row, purged 24 hours after the last turn; delete needs the `ss_sid` cookie, which a new `start` replaces.)
 - Start button: "Start"
 - First assistant line (fixed): "What's going on for you?"
-- Collapsed banner: "AI assistant · not a clinician · not an emergency service · 112"
+- Collapsed banner: "AI assistant · not a clinician · not an emergency service · emergency: call 112" (the last part is a `tel:112` link), then "Details" (accessible name "Details about this assistant")
 
 ### crisis strip and sheet
 
 - Strip (login, intake, turn-failed notice): "In danger now? Call 112." then the next two lines by name and number, then "All helplines".
 - Sheet title: "Talk to a person now"
 - Sheet lead: "These are free helplines in India. If you're in immediate danger, call 112."
+- Call buttons (handoff panel, sheet, limit notice): "Call " + name, then the number unless the label already holds it ("Call Emergency (112)", "Call Tele-MANAS · 14416"), then the line's note.
 
 ### handoff (EN / HI)
 
-- Sentence, EN: "What you've shared sounds serious, and you deserve to talk to a person right now. Please call one of these."
-- Sentence, HI: "Aapne jo bataya woh serious lagta hai. Abhi kisi insaan se baat karna zaroori hai. Please inme se kisi ek ko call karein."
+- Sentence, EN: "What you've shared sounds serious. Please call one of these numbers now and talk to a person."
+- Sentence, HI: "Aapne jo bataya woh serious lagta hai. Please abhi inme se kisi ek number par call karke kisi insaan se baat karein."
 - Follow-up, EN: "Are you safe right now?"
 - Follow-up, HI: "Kya aap abhi safe hain?"
+- On later handoff turns the reply is the follow-up, then the sentence.
 - Stepper replacement: "Getting you to people who can help"
 
 ### stock lines (EN / HI)
 
 | when | EN | HI |
 |---|---|---|
-| diagnosis | I can't diagnose, but I can help you find someone who can. | Yahan diagnosis nahi diya ja sakta, par aise expert tak pahunchne mein madad ho sakti hai jo de sakein. |
+| diagnosis | I can't diagnose, but I can help you find someone who can. | Yahan diagnosis nahi kiya ja sakta, lekin aise expert dhoondhne mein madad ho sakti hai jo diagnosis kar sakein. |
 | medical or medication | I can't advise on medicines or doses. A psychiatrist or doctor can, and I can help you find one. | Dawaiyon ya dose par yahan salah nahi di ja sakti. Psychiatrist ya doctor yeh bata sakte hain, aur unhe dhoondhne mein madad ho sakti hai. |
-| claims to be human | I'm an AI assistant, not a person. | Yeh ek AI assistant hai, koi insaan nahi. |
-| other, in understand | I'd like to understand a bit more before suggesting anything. What's been weighing on you most? | Kuch suggest karne se pehle thoda aur samajhna hai. Sabse zyada kya pareshan kar raha hai? |
-| other, in recommend | Here are some kinds of help that may fit, based on what you've shared. | Aapne jo bataya uske hisaab se, yeh kuch tarah ki madad fit ho sakti hai. |
-| other, in close | Take your time with these. You can open any of them, or delete this conversation below. | Aaram se dekhiye. Inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain. |
+| claims to be human | I'm an AI assistant, not a person. | Main ek AI assistant hoon, koi insaan nahi. |
+| other, in understand | Before suggesting anything, it helps to understand a bit more. What's been weighing on you most? | Kuch suggest karne se pehle thoda aur samajhna madadgaar hoga. Aapko sabse zyada kya pareshan kar raha hai? |
+| other, in recommend | Based on what you've shared, these kinds of help may fit. | Aapne jo bataya uske hisaab se, is tarah ki madad aapke liye sahi ho sakti hai. |
+| other, in close | Take your time with these. You can open any of them, or delete this conversation below. | Aaram se dekhiye. Aap inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain. |
 
-Replaced-reply notes (English chrome), by `replaced.reason`:
+Replaced-reply notes (English chrome), by `replaced.reason`. The live region announces the note after the reply, so screen reader users hear that a reply was held back:
 
 | reason | note |
 |---|---|
@@ -1045,33 +1051,46 @@ Replaced-reply notes (English chrome), by `replaced.reason`:
 | `link` | Held back a reply with a link that isn't on the allowed list. |
 | `name` | Held back a reply that named someone not in the catalogue. |
 | `length` | Held back a reply that ran too long. |
+| `gendered` | Held back a reply that gave the assistant a gender. |
 | `safety_unavailable` | The safety check was unavailable, so a standard reply was shown. |
 | `providers_down` | The AI services behind this demo aren't responding, so a standard reply was shown. |
 | `error` | Something went wrong with this reply, so a standard reply was shown. |
 
+### recommendation cards
+
+- Service link: "View on amahahealth.com", accessible name "View {service} on amahahealth.com, opens in a new tab".
+- Therapist link: "Find a therapist on Amaha", accessible name "Find a real therapist on amahahealth.com for the kind of help in the sample profile {name}, opens in a new tab". It replaces "Book through Amaha", which read as booking the sample person.
+- Therapist caption: "Sample profile, not a real clinician, so they can't be booked. The link goes to Amaha's real booking page for this kind of help."
+- Service caption: "Summary in our own words; details are on Amaha's page."
+- "+N" specialties button: accessible name "Show N more specialties".
+
 ### limits (EN / HI for the body)
+
+Daily caps reset at midnight IST (`istDayStart`); the hourly window is a UTC clock hour, which starts at :30 in India, so the hourly copy says "within the hour".
 
 | kind | heading | body EN | body HI |
 |---|---|---|---|
-| `conversation_turns` | This conversation has reached its limit | Each conversation is capped at 20 messages. You can start a new one. | Ek conversation mein 20 messages tak ki limit hai. Aap naya conversation shuru kar sakte hain. |
-| `daily_conversations` | Demo limit reached for today | This demo allows 5 conversations a day, because it runs on paid AI services. Please come back tomorrow. | Yeh demo paid AI services par chalta hai, isliye din mein 5 conversations ki limit hai. Kal phir try karein. |
-| `hourly_turns` | Demo limit reached for now | Too many messages in the last hour. Please try again in an hour. | Pichle ek ghante mein bahut messages ho gaye. Ek ghante baad phir try karein. |
-| `spend` | Demo limit reached for today | The demo has used its budget for today, because it runs on paid AI services. Please come back tomorrow. | Aaj ka demo budget khatam ho gaya hai. Kal phir try karein. |
+| `conversation_turns` | This conversation has reached its limit | Each conversation is limited to 20 of your messages. You can start a new one. | Ek conversation mein aapke 20 messages tak ki limit hai. Aap naya conversation shuru kar sakte hain. |
+| `daily_conversations` | Demo limit reached for today | This demo allows 5 conversations a day, because it runs on paid AI services. The limit resets at midnight India time. | Yeh demo paid AI services par chalta hai, isliye din mein 5 conversations ki limit hai. Yeh limit raat 12 baje (India time) reset hoti hai. |
+| `hourly_turns` | Demo limit reached for now | This demo allows 30 messages an hour, because it runs on paid AI services. The limit resets within the hour. | Yeh demo paid AI services par chalta hai, isliye ek ghante mein 30 messages ki limit hai. Yeh limit ek ghante ke andar reset ho jaayegi. |
+| `spend` | Demo limit reached for today | This demo has used today's budget for its paid AI services. The budget resets at midnight India time. | Is demo ka aaj ka paid AI services ka budget khatam ho gaya hai. Budget raat 12 baje (India time) reset hota hai. |
 
 Always followed by: "If you need to talk to someone now:" and the crisis line list.
 
 ### errors, delete, close
 
-- Turn failed: "Couldn't get a reply just now. Your message is still here." Button: "Try again"
-- Session expired: "Your reviewer session has ended. Sign in again; this conversation stays in this tab." Button: "Sign in again"
-- Out of sync: "This conversation can't continue. Start a new one; the crisis lines are always above." Button: "Start a new conversation"
+- Turn failed (`role="alert"`): "Couldn't get a reply just now. Your message is still here." Button: "Try again"
+- Session expired (`role="alert"`): "Your reviewer session has ended. Sign in again, then send your last message again. The conversation so far stays in this tab." Button: "Sign in again"
+- Out of sync (`role="alert"`): "This conversation can't continue. Start a new one. The crisis lines are always under "Need help now?" at the top." Button: "Start a new conversation"
 - Offline: "You're offline. Messages send when you're back online."
 - Too long: "Keep it under 1,000 characters."
-- Wrap-up panel: "That's what I can suggest for now. You can open any of these, ask a short question, or delete this conversation."
-- Delete confirm, consent given: "Delete this conversation? It's removed from this tab and from the server now. This can't be undone."
-- Delete confirm, no consent: "Delete this conversation? It's removed from this tab now. Nothing from it was saved on the server."
-- Deleted: "Deleted. Nothing from this conversation is kept."
-- Server delete failed: "Removed from this tab, but the server delete failed. It will still be deleted automatically within 30 days."
+- Turns left, from turn 15: "N messages left in this conversation" ("1 message left"; at zero, "No messages left in this conversation")
+- Wrap-up panel: "That's what I can suggest. You can open any of these, ask a short question, or delete this conversation."
+- Delete confirm, consent given: "Delete this conversation? Your saved messages are deleted from the server and the conversation is removed from this tab. This can't be undone."
+- Delete confirm, no consent: "Delete this conversation? It's removed from this tab, and the server's short record of it is deleted. Your messages were never saved there."
+- Deleted: "Deleted. Only content-free counts, like which step you reached, are kept."
+- Server delete failed, consent given: "Removed from this tab, but the server delete failed. Your saved messages are still deleted automatically after 30 days."
+- Server delete failed, no consent: "Removed from this tab. The server delete failed, but your messages were never saved there, and its short record is deleted within a day."
 
 ## component inventory
 
@@ -1256,7 +1275,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 ## open items
 
 1. Jev: the API shape, price, context limits and SDK are from TypeSafe's docs, and the org's rate limits from the console (80 requests/s, 100,000 input tokens/s, read 2026-10-26). Still open: latency on our own states, and Hinglish quality, which the risk suite measures.
-2. Every chat provider and TypeSafe receive message text, and TypeSafe's zero data retention is enterprise-only. The disclosure doesn't say so yet. A proposed line for Lokesh to approve before deploy: "What you type is sent to AI services (TypeSafe and the model providers named under About this demo) to make replies."
+2. Done 2026-10-26: every chat provider and TypeSafe receive message text, and TypeSafe's zero data retention is enterprise-only. Lokesh approved a disclosure line, now in the intake disclosure (see fixed copy), linking to About this demo on `/evals`.
 3. The projects exist (spec step 0). Still to check in step 1: Supabase free-tier pausing and pg_cron on the free plan, and whether Vercel Hobby honours `regions: ["bom1"]` (the project was created with `iad1`).
 4. Latency targets are guesses; measure in step 1 and update the budget table.
 5. Rules table and thresholds are example values until the evals tune them and a clinician reviews them.

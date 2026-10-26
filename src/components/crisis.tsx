@@ -4,6 +4,12 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import type { CrisisLine } from "@/core/types";
 
+// "Emergency (112)" already carries its number; repeating it reads as
+// "Emergency (112) 112" to a screen reader.
+function lineName(l: CrisisLine, sep: string): string {
+  return l.label.includes(l.number) ? l.label : `${l.label}${sep}${l.number}`;
+}
+
 export function CrisisLineList({
   lines,
   variant,
@@ -17,7 +23,7 @@ export function CrisisLineList({
         {lines.map((l) => (
           <li key={l.id}>
             <a className="font-medium text-accent underline underline-offset-2" href={l.telHref}>
-              {l.label}: {l.number}
+              {lineName(l, ": ")}
             </a>
           </li>
         ))}
@@ -36,7 +42,7 @@ export function CrisisLineList({
             } justify-center`}
           >
             <span className={big && i === 0 ? "text-[19px] font-semibold" : "font-semibold"}>
-              {l.label} · {l.number}
+              Call {lineName(l, " · ")}
             </span>
             <span className="text-[14px] leading-5 opacity-90">{l.note}</span>
           </a>
@@ -79,7 +85,7 @@ export function CrisisStrip({ lines }: { lines: CrisisLine[] }) {
           <span key={l.id}>
             {i > 0 && " · "}
             <a className="underline" href={l.telHref}>
-              {l.label} {l.number}
+              {lineName(l, " ")}
             </a>
           </span>
         ))}

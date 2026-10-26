@@ -41,7 +41,9 @@ export function Header({ lines, menu }: { lines: CrisisLine[]; menu?: MenuAction
                   className="z-50 w-64 rounded-xl border border-line bg-surface p-1 text-ink"
                 >
                   <Menu.CheckboxItem className={itemClass} checked={menu.traceOn} onCheckedChange={menu.onToggleTrace}>
-                    <span className="mr-2 inline-block w-4">{menu.traceOn ? "✓" : ""}</span>
+                    <span aria-hidden className="mr-2 inline-block w-4">
+                      {menu.traceOn ? "✓" : ""}
+                    </span>
                     Under the hood
                   </Menu.CheckboxItem>
                   <Menu.Separator className="my-1 h-px bg-line" />
@@ -49,7 +51,9 @@ export function Header({ lines, menu }: { lines: CrisisLine[]; menu?: MenuAction
                   <Menu.RadioGroup value={theme ?? "system"} onValueChange={setTheme}>
                     {["system", "light", "dark"].map((t) => (
                       <Menu.RadioItem key={t} value={t} className={itemClass}>
-                        <span className="mr-2 inline-block w-4">{theme === t ? "•" : ""}</span>
+                        <span aria-hidden className="mr-2 inline-block w-4">
+                          {theme === t ? "•" : ""}
+                        </span>
                         {t[0].toUpperCase() + t.slice(1)}
                       </Menu.RadioItem>
                     ))}
@@ -66,7 +70,7 @@ export function Header({ lines, menu }: { lines: CrisisLine[]; menu?: MenuAction
                   </Menu.Item>
                   <Menu.Separator className="my-1 h-px bg-line" />
                   <Menu.Item className={itemClass} asChild>
-                    <Link href="/evals">About this demo</Link>
+                    <Link href="/evals#about">About this demo</Link>
                   </Menu.Item>
                 </Menu.Content>
               </Menu.Portal>

@@ -3,6 +3,7 @@
 // stages and the crisis handoff. The conversation lives in React state
 // mirrored to sessionStorage; the server owns stage, turn count and the locks
 // (design D50).
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Card, CrisisLine, Final, Lang, Phase, ReplacedReason } from "@/core/types";
@@ -30,7 +31,14 @@ type ChatMessage = {
 
 type Conv = { started: boolean; consent: boolean; messages: ChatMessage[]; last: Final | null };
 
-type Notice = null | "turn_failed" | "session_expired" | "out_of_sync" | "deleted" | "delete_failed";
+type Notice =
+  | null
+  | "turn_failed"
+  | "session_expired"
+  | "out_of_sync"
+  | "deleted"
+  | "delete_failed"
+  | "delete_failed_unsaved";
 
 const EMPTY: Conv = { started: false, consent: false, messages: [], last: null };
 
@@ -55,12 +63,26 @@ const REPLACED_NOTE: Record<ReplacedReason, string> = {
   error: "Something went wrong with this reply, so a standard reply was shown.",
 };
 
+const DELETE_NOTICE: Partial<Record<NonNullable<Notice>, string>> = {
+  deleted: "Deleted. Only content-free counts, like which step you reached, are kept.",
+  delete_failed:
+    "Removed from this tab, but the server delete failed. Your saved messages are still deleted automatically after 30 days.",
+  delete_failed_unsaved:
+    "Removed from this tab. The server delete failed, but your messages were never saved there, and its short record is deleted within a day.",
+};
+
 const LIMIT_HEADING: Record<string, string> = {
   conversation_turns: "This conversation has reached its limit",
   daily_conversations: "Demo limit reached for today",
   hourly_turns: "Demo limit reached for now",
   spend: "Demo limit reached for today",
 };
+
+// The cap counts the user's messages; crisis replies still come after it.
+function turnsLeft(n: number): string {
+  if (n <= 0) return "No messages left in this conversation";
+  return `${n} ${n === 1 ? "message" : "messages"} left in this conversation`;
+}
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -228,7 +250,11 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
         },
       ],
     }));
-    setAnnounce(`Assistant: ${f.reply}`);
+    // The handoff moves focus to its heading instead, which reads the reply.
+    if (f.stage !== "handoff") {
+      const note = f.replaced ? ` ${REPLACED_NOTE[f.replaced.reason]}` : "";
+      setAnnounce(`Assistant: ${f.reply}${note}`);
+    }
   }
 
   function submit() {
@@ -244,8 +270,9 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
   }
 
   async function doDelete() {
+    const saved = conv.consent;
     const res = await fetch("/api/conversation", { method: "DELETE" }).catch(() => null);
-    reset(res?.status === 204 ? "deleted" : "delete_failed");
+    reset(res?.status === 204 ? "deleted" : saved ? "delete_failed" : "delete_failed_unsaved");
   }
 
   async function signOut() {
@@ -267,7 +294,7 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
   }
 
   useEffect(() => {
-    if (notice !== "deleted" && notice !== "delete_failed") return;
+    if (notice !== "deleted" && notice !== "delete_failed" && notice !== "delete_failed_unsaved") return;
     const t = setTimeout(() => setNotice(null), 4000);
     return () => clearTimeout(t);
   }, [notice]);
@@ -297,11 +324,9 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
         {announce}
       </div>
       <main id="conversation" className="mx-auto flex max-w-[680px] flex-col gap-4 px-4 py-6 sm:px-6">
-        {(notice === "deleted" || notice === "delete_failed") && (
+        {notice && DELETE_NOTICE[notice] && (
           <p role="status" className="rounded-lg border border-line bg-surface p-3 text-[14px]">
-            {notice === "deleted"
-              ? "Deleted. Nothing from this conversation is kept."
-              : "Removed from this tab, but the server delete failed. It will still be deleted automatically within 30 days."}
+            {DELETE_NOTICE[notice]}
           </p>
         )}
 
@@ -309,8 +334,8 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
           <div className="rounded-xl border border-line bg-surface p-4">
             <p>
               {conv.consent
-                ? "Delete this conversation? It's removed from this tab and from the server now. This can't be undone."
-                : "Delete this conversation? It's removed from this tab now. Nothing from it was saved on the server."}
+                ? "Delete this conversation? Your saved messages are deleted from the server and the conversation is removed from this tab. This can't be undone."
+                : "Delete this conversation? It's removed from this tab, and the server's short record of it is deleted. Your messages were never saved there."}
             </p>
             <div className="mt-3 flex gap-2">
               <button className="min-h-11 rounded-lg bg-danger px-4 font-semibold text-white" onClick={doDelete}>
@@ -410,7 +435,7 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
 
             {(stage === "close" || stage === "recommend") && !limit && !phase && (
               <section className="rounded-xl border border-line bg-surface p-4">
-                <p>That&apos;s what I can suggest for now. You can open any of these, ask a short question, or delete this conversation.</p>
+                <p>That&apos;s what I can suggest. You can open any of these, ask a short question, or delete this conversation.</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button className="min-h-11 rounded-lg border border-danger px-4 font-medium text-danger" onClick={() => setConfirmDelete(true)}>
                     Delete my conversation
@@ -430,7 +455,7 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
 
             {notice === "turn_failed" && (
               <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
-                <p>Couldn&apos;t get a reply just now. Your message is still here.</p>
+                <p role="alert">Couldn&apos;t get a reply just now. Your message is still here.</p>
                 <button className="min-h-11 self-start rounded-lg bg-accent px-4 font-semibold text-on-accent" onClick={retry}>
                   Try again
                 </button>
@@ -439,7 +464,10 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
             )}
             {notice === "session_expired" && (
               <div className="rounded-xl border border-line bg-surface p-4">
-                <p>Your reviewer session has ended. Sign in again; this conversation stays in this tab.</p>
+                <p role="alert">
+                  Your reviewer session has ended. Sign in again, then send your last message again. The conversation
+                  so far stays in this tab.
+                </p>
                 <a className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-accent px-4 font-semibold text-on-accent" href="/login">
                   Sign in again
                 </a>
@@ -447,7 +475,10 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
             )}
             {notice === "out_of_sync" && (
               <div className="rounded-xl border border-line bg-surface p-4">
-                <p>This conversation can&apos;t continue. Start a new one; the crisis lines are always above.</p>
+                <p role="alert">
+                  This conversation can&apos;t continue. Start a new one. The crisis lines are always under &quot;Need help
+                  now?&quot; at the top.
+                </p>
                 <button className="mt-3 min-h-11 rounded-lg bg-accent px-4 font-semibold text-on-accent" onClick={() => reset()}>
                   Start a new conversation
                 </button>
@@ -498,7 +529,7 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
                 />
                 <div id="composer-meta" className="flex items-center justify-between gap-3 text-[14px] text-muted">
                   <span>
-                    {turnsUsed >= 15 && `${turnsLimit - turnsUsed} turns left in this conversation`}
+                    {turnsUsed >= 15 && turnsLeft(turnsLimit - turnsUsed)}
                     {cp > MAX_CODE_POINTS && <span className="text-danger"> Keep it under 1,000 characters.</span>}
                   </span>
                   <span className="flex items-center gap-3">
@@ -564,9 +595,11 @@ function IntakeCard({
         <span>
           Save this conversation for 30 days so Lokesh can review how the demo works (optional)
           <span id="consent-help" className="mt-1 block text-[14px] leading-5 text-muted">
-            Saved conversations are deleted automatically after 30 days, and you can delete yours any time. If you
-            leave this unticked, nothing you type is stored; only content-free counts, like which step you reached,
-            are logged.
+            If you tick this, your messages are saved and deleted automatically after 30 days. You can delete them
+            sooner with &quot;Delete my conversation&quot;, until you start a new one. If you leave it unticked, your
+            messages aren&apos;t saved. Either way, the server keeps content-free counts, like which step you reached,
+            and until a day after your last message a short summary used to match suggestions, like the kind of concern
+            and city.
           </span>
         </span>
       </label>
@@ -597,8 +630,15 @@ function Disclosure() {
       <p>I&apos;m an AI assistant. I&apos;m not a therapist, doctor or counsellor, and I can&apos;t diagnose or prescribe.</p>
       <p>I&apos;m not an emergency service. If you might be in danger, call 112 now.</p>
       <p>
-        I&apos;ll ask a few questions about what&apos;s going on, then suggest kinds of help and Amaha services and
-        therapists that may fit. What you do next is up to you.
+        What you type is sent to AI services to write and check replies: TypeSafe and the model providers named under{" "}
+        <Link className="underline" href="/evals#about">
+          About this demo
+        </Link>
+        . This happens whether or not you save the conversation.
+      </p>
+      <p>
+        I&apos;ll ask a few questions about what&apos;s going on, then suggest kinds of help that may fit, with links to
+        Amaha services and sample therapist profiles. What you do next is up to you.
       </p>
       <p>This is an independent demo by Lokesh, not affiliated with Amaha.</p>
     </div>
@@ -610,9 +650,14 @@ function DisclosureBanner() {
   return (
     <div className="rounded-lg border border-line bg-surface px-3 py-2 text-[14px] leading-5">
       <div className="flex items-center justify-between gap-2">
-        <span>AI assistant · not a clinician · not an emergency service · 112</span>
+        <span>
+          AI assistant · not a clinician · not an emergency service ·{" "}
+          <a className="font-medium underline" href="tel:112">
+            emergency: call 112
+          </a>
+        </span>
         <button className="min-h-11 shrink-0 px-2 underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          Details
+          Details<span className="sr-only"> about this assistant</span>
         </button>
       </div>
       {open && (

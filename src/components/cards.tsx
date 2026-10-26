@@ -20,14 +20,14 @@ export function HelpTypeChips({ labels }: { labels: string[] }) {
   );
 }
 
-function ExternalLink({ href, label, name }: { href: string; label: string; name: string }) {
+function ExternalLink({ href, label, ariaLabel }: { href: string; label: string; ariaLabel: string }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="mt-3 inline-flex min-h-11 items-center gap-1 font-medium text-accent underline underline-offset-2"
-      aria-label={`${label} for ${name} on amahahealth.com, opens in a new tab`}
+      aria-label={`${ariaLabel}, opens in a new tab`}
     >
       {label}
       <span aria-hidden>↗</span>
@@ -48,16 +48,25 @@ function TherapistCard({ c }: { c: Card }) {
         <p className="text-[15px]">
           {shown.join(" · ")}
           {!all && c.specialties.length > 3 && (
-            <button className="ml-2 underline" onClick={() => setAll(true)}>
+            <button
+              className="ml-2 underline"
+              onClick={() => setAll(true)}
+              aria-label={`Show ${c.specialties.length - 3} more specialties`}
+            >
               +{c.specialties.length - 3}
             </button>
           )}
         </p>
       )}
       <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
-      <ExternalLink href={c.url} label="Book through Amaha" name={c.name} />
+      <ExternalLink
+        href={c.url}
+        label="Find a therapist on Amaha"
+        ariaLabel={`Find a real therapist on amahahealth.com for the kind of help in the sample profile ${c.name}`}
+      />
       <p className="mt-1 text-[13px] leading-[18px] text-muted">
-        Sample profile, not a real clinician. The link goes to Amaha&apos;s real booking page for this kind of help.
+        Sample profile, not a real clinician, so they can&apos;t be booked. The link goes to Amaha&apos;s real booking
+        page for this kind of help.
       </p>
     </article>
   );
@@ -70,7 +79,7 @@ function ServiceCard({ c }: { c: Card }) {
       <h3 className="mt-1 text-[17px] leading-6 font-semibold">{c.name}</h3>
       {c.summary && <p>{c.summary}</p>}
       <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
-      <ExternalLink href={c.url} label="View on amahahealth.com" name={c.name} />
+      <ExternalLink href={c.url} label="View on amahahealth.com" ariaLabel={`View ${c.name} on amahahealth.com`} />
       <p className="mt-1 text-[13px] leading-[18px] text-muted">Summary in our own words; details are on Amaha&apos;s page.</p>
     </article>
   );

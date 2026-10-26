@@ -1,7 +1,7 @@
 {
   "handoffSentence": {
-    "en-IN": "What you've shared sounds serious, and you deserve to talk to a person right now. Please call one of these.",
-    "hi-Latn": "Aapne jo bataya woh serious lagta hai. Abhi kisi insaan se baat karna zaroori hai. Please inme se kisi ek ko call karein."
+    "en-IN": "What you've shared sounds serious. Please call one of these numbers now and talk to a person.",
+    "hi-Latn": "Aapne jo bataya woh serious lagta hai. Please abhi inme se kisi ek number par call karke kisi insaan se baat karein."
   },
   "handoffFollowUp": {
     "en-IN": "Are you safe right now?",
@@ -10,7 +10,7 @@
   "byReason": {
     "diagnosis": {
       "en-IN": "I can't diagnose, but I can help you find someone who can.",
-      "hi-Latn": "Yahan diagnosis nahi diya ja sakta, par aise expert tak pahunchne mein madad ho sakti hai jo de sakein."
+      "hi-Latn": "Yahan diagnosis nahi kiya ja sakta, lekin aise expert dhoondhne mein madad ho sakti hai jo diagnosis kar sakein."
     },
     "medical": {
       "en-IN": "I can't advise on medicines or doses. A psychiatrist or doctor can, and I can help you find one.",
@@ -18,39 +18,39 @@
     },
     "claims_human": {
       "en-IN": "I'm an AI assistant, not a person.",
-      "hi-Latn": "Yeh ek AI assistant hai, koi insaan nahi."
+      "hi-Latn": "Main ek AI assistant hoon, koi insaan nahi."
     }
   },
   "byStage": {
     "understand": {
-      "en-IN": "I'd like to understand a bit more before suggesting anything. What's been weighing on you most?",
-      "hi-Latn": "Kuch suggest karne se pehle thoda aur samajhna hai. Sabse zyada kya pareshan kar raha hai?"
+      "en-IN": "Before suggesting anything, it helps to understand a bit more. What's been weighing on you most?",
+      "hi-Latn": "Kuch suggest karne se pehle thoda aur samajhna madadgaar hoga. Aapko sabse zyada kya pareshan kar raha hai?"
     },
     "recommend": {
-      "en-IN": "Here are some kinds of help that may fit, based on what you've shared.",
-      "hi-Latn": "Aapne jo bataya uske hisaab se, yeh kuch tarah ki madad fit ho sakti hai."
+      "en-IN": "Based on what you've shared, these kinds of help may fit.",
+      "hi-Latn": "Aapne jo bataya uske hisaab se, is tarah ki madad aapke liye sahi ho sakti hai."
     },
     "close": {
       "en-IN": "Take your time with these. You can open any of them, or delete this conversation below.",
-      "hi-Latn": "Aaram se dekhiye. Inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain."
+      "hi-Latn": "Aaram se dekhiye. Aap inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain."
     }
   },
   "limits": {
     "conversation_turns": {
-      "en-IN": "Each conversation is capped at 20 messages. You can start a new one.",
-      "hi-Latn": "Ek conversation mein 20 messages tak ki limit hai. Aap naya conversation shuru kar sakte hain."
+      "en-IN": "Each conversation is limited to 20 of your messages. You can start a new one.",
+      "hi-Latn": "Ek conversation mein aapke 20 messages tak ki limit hai. Aap naya conversation shuru kar sakte hain."
     },
     "daily_conversations": {
-      "en-IN": "This demo allows 5 conversations a day, because it runs on paid AI services. Please come back tomorrow.",
-      "hi-Latn": "Yeh demo paid AI services par chalta hai, isliye din mein 5 conversations ki limit hai. Kal phir try karein."
+      "en-IN": "This demo allows 5 conversations a day, because it runs on paid AI services. The limit resets at midnight India time.",
+      "hi-Latn": "Yeh demo paid AI services par chalta hai, isliye din mein 5 conversations ki limit hai. Yeh limit raat 12 baje (India time) reset hoti hai."
     },
     "hourly_turns": {
-      "en-IN": "Too many messages in the last hour. Please try again in an hour.",
-      "hi-Latn": "Pichle ek ghante mein bahut messages ho gaye. Ek ghante baad phir try karein."
+      "en-IN": "This demo allows 30 messages an hour, because it runs on paid AI services. The limit resets within the hour.",
+      "hi-Latn": "Yeh demo paid AI services par chalta hai, isliye ek ghante mein 30 messages ki limit hai. Yeh limit ek ghante ke andar reset ho jaayegi."
     },
     "spend": {
-      "en-IN": "The demo has used its budget for today, because it runs on paid AI services. Please come back tomorrow.",
-      "hi-Latn": "Aaj ka demo budget khatam ho gaya hai. Kal phir try karein."
+      "en-IN": "This demo has used today's budget for its paid AI services. The budget resets at midnight India time.",
+      "hi-Latn": "Is demo ka aaj ka paid AI services ka budget khatam ho gaya hai. Budget raat 12 baje (India time) reset hota hai."
     }
   }
 }
