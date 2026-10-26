@@ -42,6 +42,8 @@ Recommendation, 2026-10-26, 24 scripted conversations (12 English, 10 Hinglish, 
 | replies containing a link | 0 |
 | turns that fell back to a stock line | 0 |
 
+Same suite on the Grok CLI (its default model, run before the reply-language fix in `9ea4daf`): 24 / 24 reach recommend with the expected help types, 20 / 24 exact, 3 unasked-for crisis lines, no stray cards or links. 6 turns fell back to a stock line. In 5 of them Grok was still asking for searches at the 3-call cap, so the controller showed its own top cards with the stock line, as designed. In the sixth the CLI exited with "max turns reached". Full output: `evals/results/latest-recommendation-grok-cli.json`.
+
 The rules table adds "therapist" to every recommendation by design, so a self-care case shows a therapist too. Help types come from Jev's needs record and the rules table, not the chat model, so the chat model mostly shapes the wording and which cards show.
 
 Locally, chat always goes through a CLI: `LLM_LOCAL_CLI=claude` (the default, Haiku) or `LLM_LOCAL_CLI=grok` in `.env.development.local`. The API providers and their keys are for production only, and neither local dev nor the evals use them. Without Supabase keys, sessions are kept in memory. None of these local paths exist in a production build.
