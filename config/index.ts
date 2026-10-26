@@ -99,6 +99,7 @@ const ConfigSchema = z.strictObject({
       .min(1),
     localCli: z.strictObject({
       claude: z.strictObject({ model: z.string(), timeoutMs: z.number().int().positive() }),
+      grok: z.strictObject({ model: z.string().nullable(), timeoutMs: z.number().int().positive() }),
     }),
     jev: z.strictObject({ model: z.string() }),
   }),

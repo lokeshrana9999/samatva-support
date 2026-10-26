@@ -11,6 +11,9 @@
       "timeoutMs": 8000
     }
   ],
-  "localCli": { "claude": { "model": "haiku", "timeoutMs": 60000 } },
+  "localCli": {
+    "claude": { "model": "haiku", "timeoutMs": 60000 },
+    "grok": { "model": null, "timeoutMs": 90000 }
+  },
   "jev": { "model": "jev-1.14.0" }
 }

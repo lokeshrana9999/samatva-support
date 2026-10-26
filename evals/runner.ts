@@ -10,7 +10,6 @@ import { config } from "@config";
 import { JevDecisionModel } from "@/adapters/decision/jev";
 import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
 import { ProviderChain } from "@/adapters/chat/chain";
-import { OpenAICompatibleProvider } from "@/adapters/chat/openai-compatible";
 import { MemorySessionStore } from "@/adapters/memory/sessions";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { assessRisk } from "@/core/gates/risk";
@@ -150,34 +149,20 @@ type RecCase = { id: string; lang: "en" | "hi"; expect: string[]; turns: string[
 
 const LABEL_TO_ID = Object.fromEntries(Object.entries(HELP_TYPE_LABEL).map(([id, label]) => [label, id]));
 
-// Google AI Studio's free tier allows 15 requests a minute per model, so the
-// chain target spaces its calls out instead of tripping the quota and
-// measuring fallbacks.
-class Throttled implements ChatModel {
-  private next = 0;
-  constructor(
-    private readonly inner: ChatModel,
-    private readonly gapMs: number,
-  ) {}
-  async complete(req: Parameters<ChatModel["complete"]>[0]) {
-    const wait = Math.max(0, this.next - Date.now());
-    this.next = Math.max(Date.now(), this.next) + this.gapMs;
-    if (wait) await new Promise((r) => setTimeout(r, wait));
-    return this.inner.complete(req);
-  }
-}
-
+// Evals run on the local CLIs only. The provider keys in .env belong to the
+// deployed app and are never loaded here (spec 5c, Lokesh, 2026-10-26).
 async function chatTarget(target: string): Promise<ChatModel> {
   if (target === "claude-cli") {
     const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
-    return new ProviderChain([{ provider: new ClaudeCliProvider("haiku"), timeoutMs: 90_000 }]);
+    const cli = config.providers.localCli.claude;
+    return new ProviderChain([{ provider: new ClaudeCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
   }
-  const keyEnv = { openrouter: "OPEN_ROUTER", google: "GOOGLE_STUDIO", alibaba: "ALIBABA_KEY" } as const;
-  const providers = config.providers.chat
-    .filter((p) => process.env[keyEnv[p.id]])
-    .map((p) => ({ provider: new OpenAICompatibleProvider(p.id, p.model, process.env[keyEnv[p.id]]!), timeoutMs: p.timeoutMs }));
-  if (!providers.length) throw new Error("no chat provider key in the environment");
-  return new Throttled(new ProviderChain(providers), 5_000);
+  if (target === "grok-cli") {
+    const { GrokCliProvider } = await import("@/adapters/chat/cli/grok");
+    const cli = config.providers.localCli.grok;
+    return new ProviderChain([{ provider: new GrokCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+  }
+  throw new Error(`unknown target: ${target} (use claude-cli or grok-cli)`);
 }
 
 async function runRecommendation(target: string) {
@@ -272,7 +257,7 @@ const pct = (x: number | null) => (x === null ? "  n/a" : `${(x * 100).toFixed(0
 async function main() {
   const suite = arg("suite", "risk");
   if (suite === "recommendation") {
-    const r = await runRecommendation(arg("target", "chain"));
+    const r = await runRecommendation(arg("target", "claude-cli"));
     const m = r.metrics;
     console.log(`recommendation suite (${r.target}): ${r.cases} cases, ${r.seconds}s, $${r.costUsd}`);
     console.log(`reached recommend ${pct(m.reachedRecommend)} · help types match ${pct(m.helpTypeMatch)} (en ${pct(m.byLang.en)}, hi ${pct(m.byLang.hi)}) · mean turns ${m.meanTurnsToRecommend.toFixed(1)}`);

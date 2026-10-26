@@ -572,7 +572,7 @@ The chain adapter implements `ChatModel` and tries providers in the order from `
 
 There's no plain retry on the same provider because the user is waiting and the next provider is an independent path. The 60 s skip list lives in instance memory, so it isn't shared across Vercel instances; that's acceptable for a demo and stated as such.
 
-The CLI adapters (`src/adapters/chat/cli/`) are imported only by `src/composition/local.ts`, which loads only when `NODE_ENV !== 'production'` and `LLM_LOCAL_CLI=1` (spec 5d). The production build aliases that folder to a stub that throws, and a CI check fails if the server bundle contains the CLI spawn code.
+The CLI adapters (`src/adapters/chat/cli/claude.ts`, `grok.ts`) are imported only behind `NODE_ENV !== 'production'`, which Next inlines at build, so the production bundle drops them (checked: no CLI spawn code in the server bundle). Outside production, `src/composition/index.ts` builds a CLI and nothing else: `LLM_LOCAL_CLI` picks `claude` (the default) or `grok`, and the API providers are never constructed, so the keys in `.env` can't be used even though Next loads that file in dev (spec 5d).
 
 ## data model
 
@@ -790,7 +790,7 @@ evals/
 
 ```
 evals/runner.ts --suite risk|recommendation|redteam
-                --target claude-cli|grok-cli|chain
+                --target claude-cli|grok-cli      (CLIs only, spec 5d)
 ```
 
 The runner imports `runTurn` and wires its own ports: the target as `ChatModel`, real Jev as `DecisionModel`, the in-memory adapters over `catalogue/*.json` for `Catalogue`, `SessionStore` and `AuditLog`, a no-op `TranscriptStore`, and a limiter that never blocks but totals spend for the report. No web layer, no Supabase.
@@ -974,7 +974,7 @@ Every error notice keeps the crisis lines one tap away via "Need help now?".
 Reads the latest results JSON at build time; no model calls, no login (D51).
 
 - Header: h1 "Evals", then "Run " + date + " · commit " + short sha + " · " + N + " synthetic cases, English and Hinglish", and the model id per target.
-- One section per suite (Risk, Recommendation, Red-team), each with a table: one row per metric, one column for the target and one per eval target (Claude CLI, Grok CLI, deployed chain). A cell that meets its target shows the number with a check in `--accent`; a miss shows the number, a warning icon in `--warn`, and the gap ("0.92, 0.08 short").
+- One section per suite (Risk, Recommendation, Red-team), each with a table: one row per metric, one column for the target and one per eval target (Claude CLI, Grok CLI). A cell that meets its target shows the number with a check in `--accent`; a miss shows the number, a warning icon in `--warn`, and the gap ("0.92, 0.08 short").
 - Under each table, a Collapsible "Where it falls short (N)": each failed case's id, the synthetic input, expected, got, and which target.
 - Empty state: "No eval run published yet."
 - Tables scroll horizontally inside their own container on narrow screens, with the metric column sticky; the page itself never scrolls sideways.

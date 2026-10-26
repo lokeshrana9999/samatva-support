@@ -35,12 +35,12 @@ async function build(): Promise<Deps> {
 
   let chat: ChatModel;
   let turnDeadlineMs = config.limits.turnDeadlineMs;
-  // NODE_ENV is inlined at build time, so the CLI import is dropped from the
-  // production bundle (spec 5d).
-  if (process.env.NODE_ENV !== "production" && process.env.LLM_LOCAL_CLI === "1") {
-    const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
-    const cli = config.providers.localCli.claude;
-    chat = new ProviderChain([{ provider: new ClaudeCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+  // Outside production the chat model is a local CLI and nothing else: the
+  // provider keys in .env are for the deployed app only (spec 5c, Lokesh,
+  // 2026-10-26). NODE_ENV is inlined at build time, so the CLI imports are
+  // dropped from the production bundle (spec 5d).
+  if (process.env.NODE_ENV !== "production") {
+    chat = await localCliChat();
     turnDeadlineMs = LOCAL_CLI_DEADLINE_MS;
   } else {
     const providers: { provider: ChatProvider; timeoutMs: number }[] = [];
@@ -66,6 +66,20 @@ async function build(): Promise<Deps> {
   }
 
   return { chat, decision: decisionModel(), catalogue: new JsonCatalogue(), sessions, audit, keywordFloor, turnDeadlineMs };
+}
+
+// LLM_LOCAL_CLI picks the CLI: `claude` (default) or `grok`.
+export async function localCliChat(which = process.env.LLM_LOCAL_CLI || "claude"): Promise<ChatModel> {
+  if (process.env.NODE_ENV === "production") throw new Error("local CLIs never run in production");
+  if (which === "grok") {
+    const { GrokCliProvider } = await import("@/adapters/chat/cli/grok");
+    const cli = config.providers.localCli.grok;
+    return new ProviderChain([{ provider: new GrokCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+  }
+  if (which !== "claude" && which !== "1") throw new Error(`LLM_LOCAL_CLI must be claude or grok, not ${which}`);
+  const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
+  const cli = config.providers.localCli.claude;
+  return new ProviderChain([{ provider: new ClaudeCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
 }
 
 // Jev in every environment, no stand-in model (D20). Without a key every call

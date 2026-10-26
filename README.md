@@ -16,7 +16,7 @@ npm run typecheck
 npm run lint       # includes the core's import-boundary rule
 ```
 
-`npm run eval -- --suite risk` runs the risk suite against real Jev (needs `TYPESAFE_API_KEY`).
+`npm run eval -- --suite risk` runs the risk suite against real Jev (needs `TYPESAFE_API_KEY` in `.env.local`). `npm run eval -- --suite recommendation --target claude-cli` (or `grok-cli`) runs the recommendation suite through the full turn pipeline on a local CLI. The eval script loads `.env.local` only, never `.env`.
 
 ## eval results
 
@@ -30,4 +30,4 @@ Risk gate, 2026-10-26, `jev-1.14.0`, 60 synthetic cases (English and Hinglish, w
 
 Being-harmed recall: 100%. The two misses are Hinglish exaggerations read as `elevated` ("kaam itna hai ki mar jaunga", "mummy maar dalegi"), which only adds crisis lines to the screen. The suite is small and written by the same person who wrote the gate, so treat it as a smoke test, not a benchmark.
 
-With `LLM_LOCAL_CLI=1` in `.env.development.local`, local chat goes through the Claude CLI on Haiku instead of OpenRouter, and without Supabase keys sessions are kept in memory. Neither path exists in a production build.
+Locally, chat always goes through a CLI: `LLM_LOCAL_CLI=claude` (the default, Haiku) or `LLM_LOCAL_CLI=grok` in `.env.development.local`. The API providers and their keys are for production only, and neither local dev nor the evals use them. Without Supabase keys, sessions are kept in memory. None of these local paths exist in a production build.
