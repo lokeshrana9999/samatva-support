@@ -91,7 +91,7 @@ export function LoginForm() {
       </label>
       {state === "too_many" && (
         <p role="alert" className="text-[14px] text-danger">
-          Too many tries. Wait {waitMinutes} minutes, then try again.
+          Too many tries. Wait {waitMinutes} {waitMinutes === 1 ? "minute" : "minutes"}, then try again.
         </p>
       )}
       {state === "error" && (
