@@ -87,18 +87,22 @@ async function build(): Promise<Deps> {
   return { chat, decision: decisionModel(), catalogue: new JsonCatalogue(), sessions, audit, limiter, transcripts, keywordFloor, turnDeadlineMs };
 }
 
-// LLM_LOCAL_CLI picks the CLI: `claude` (default) or `grok`.
+// LLM_LOCAL_CLI picks the CLI: `claude` (default) or `grok`. The imports sit
+// inside the NODE_ENV block so the production build drops them; an early
+// `throw` isn't enough, since the bundler keeps code after a runtime throw.
 export async function localCliChat(which = process.env.LLM_LOCAL_CLI || "claude"): Promise<ChatModel> {
-  if (process.env.NODE_ENV === "production") throw new Error("local CLIs never run in production");
-  if (which === "grok") {
-    const { GrokCliProvider } = await import("@/adapters/chat/cli/grok");
-    const cli = config.providers.localCli.grok;
-    return new ProviderChain([{ provider: new GrokCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+  if (process.env.NODE_ENV !== "production") {
+    if (which === "grok") {
+      const { GrokCliProvider } = await import("@/adapters/chat/cli/grok");
+      const cli = config.providers.localCli.grok;
+      return new ProviderChain([{ provider: new GrokCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+    }
+    if (which !== "claude" && which !== "1") throw new Error(`LLM_LOCAL_CLI must be claude or grok, not ${which}`);
+    const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
+    const cli = config.providers.localCli.claude;
+    return new ProviderChain([{ provider: new ClaudeCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
   }
-  if (which !== "claude" && which !== "1") throw new Error(`LLM_LOCAL_CLI must be claude or grok, not ${which}`);
-  const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
-  const cli = config.providers.localCli.claude;
-  return new ProviderChain([{ provider: new ClaudeCliProvider(cli.model), timeoutMs: cli.timeoutMs }]);
+  throw new Error("local CLIs never run in production");
 }
 
 // Jev in every environment, no stand-in model (D20). Without a key every call

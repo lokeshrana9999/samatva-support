@@ -4,7 +4,7 @@ A support assistant that listens first, works out what kind of help might fit, a
 
 Built by Lokesh as the build submission for Amaha's AI Engineer role (option 1: "a conversational agent that helps someone figure out what kind of help they might need"). It is an independent demo, not affiliated with Amaha. Therapist profiles are invented samples, and Amaha's service pages are linked, never copied.
 
-- Live: https://samatva-support.vercel.app (sign in with any email and the access key Lokesh shares)
+- Live: https://samatva-support.vercel.app. Reviewers open the link Lokesh shares (`/join#k=…`) and enter only their email; signing in with an email and the access key on `/login` also works.
 - Evals and "About this demo", public: https://samatva-support.vercel.app/evals
 - Decisions: `docs/spec.md`. System and frontend design: `docs/design.md`.
 
