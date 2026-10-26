@@ -93,7 +93,7 @@ describe("runTurn", () => {
     });
     expect(final).toMatchObject({ reply: "What has been hardest?", stage: "understand", replaced: null, turnsUsed: 1 });
     expect(final.trace.risk.jev).toEqual({ tier: "none", score: 0.05 });
-    expect(final.trace.checks.map((c) => c.name)).toEqual(["length", "links", "names", "diagnosis", "medical", "claims_human"]);
+    expect(final.trace.checks.map((c) => c.name)).toEqual(["length", "links", "names", "no_gender", "diagnosis", "medical", "claims_human"]);
     expect(s.stage).toBe("understand");
     expect(phases).toEqual(["reading", "thinking", "checking"]);
   });

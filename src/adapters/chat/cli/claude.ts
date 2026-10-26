@@ -9,7 +9,7 @@ import { ProviderError, type ChatProvider, type ProviderRequest } from "../provi
 
 // On Windows `claude` is a .cmd shim, which needs a shell and would mangle the
 // multi-line system prompt. Spawn the real executable instead.
-function claudeBin(): string {
+export function claudeBin(): string {
   if (process.env.CLAUDE_BIN) return process.env.CLAUDE_BIN;
   if (process.platform === "win32" && process.env.APPDATA) {
     const exe = path.join(process.env.APPDATA, "npm", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");

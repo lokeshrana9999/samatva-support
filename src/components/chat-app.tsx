@@ -49,6 +49,7 @@ const REPLACED_NOTE: Record<ReplacedReason, string> = {
   link: "Held back a reply with a link that isn't on the allowed list.",
   name: "Held back a reply that named someone not in the catalogue.",
   length: "Held back a reply that ran too long.",
+  gendered: "Held back a reply that gave the assistant a gender.",
   safety_unavailable: "The safety check was unavailable, so a standard reply was shown.",
   providers_down: "The AI services behind this demo aren't responding, so a standard reply was shown.",
   error: "Something went wrong with this reply, so a standard reply was shown.",

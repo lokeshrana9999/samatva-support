@@ -16,6 +16,7 @@ export type ReplacedReason =
   | "link"
   | "name"
   | "length"
+  | "gendered"
   | "safety_unavailable"
   | "providers_down"
   | "error";

@@ -61,3 +61,23 @@ describe("action shape", () => {
     expect(parseAction("{}").ok).toBe(false);
   });
 });
+
+describe("gendered first person", () => {
+  it.each([
+    "Main koi diagnosis nahi de sakti hoon.",
+    "Samajh gaya. Aapko kaafi stress hai.",
+    "Main aapko kuch options bataungi.",
+    "Main yeh samajh raha hoon ki mushkil hai.",
+  ])("blocks %j", (reply) => {
+    expect(filterReply({ ...base, reply }).violation).toBe("gendered");
+  });
+
+  it.each([
+    "Samajh aa raha hai. Aapko kaafi stress hai.",
+    "Yahan diagnosis nahi diya ja sakta, par madad ho sakti hai.",
+    "Aap thak gaye hain, aur kaam pe asar pad raha hai.",
+    "You said you're tired. What has been hardest?",
+  ])("allows %j", (reply) => {
+    expect(filterReply({ ...base, reply }).violation).toBeNull();
+  });
+});
