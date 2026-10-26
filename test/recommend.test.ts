@@ -5,7 +5,12 @@ import { compileFloor } from "@/core/gates/keyword-floor";
 import { EMPTY_NEEDS, enough, helpTypesFor, type NeedsRecord } from "@/core/needs";
 import type { Action } from "@/core/action";
 import type { ChatModel, DecisionModel } from "@/core/ports";
-import { runTurn } from "@/core/turn";
+import { runTurn as runTurnRaw } from "@/core/turn";
+import { MemoryRateLimiter } from "@/adapters/memory/limiter";
+
+const who = { ipHash: "ip-test", reviewerHash: "rv-test" };
+const runTurn = (d: Omit<Parameters<typeof runTurnRaw>[0], "limiter"> & { limiter?: Parameters<typeof runTurnRaw>[0]["limiter"] }, i: Omit<Parameters<typeof runTurnRaw>[1], "who">) =>
+  runTurnRaw({ limiter: new MemoryRateLimiter(config.limits), ...d }, { who, ...i });
 import type { Msg, SessionState } from "@/core/types";
 
 const usage = { inputTokens: 1, outputTokens: 1, usd: 0 };

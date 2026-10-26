@@ -18,11 +18,16 @@ type Completion = {
   usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
 };
 
+export type Price = { input: number; output: number }; // USD per million tokens
+
 export class OpenAICompatibleProvider implements ChatProvider {
   constructor(
     readonly id: CompatId,
     readonly model: string,
     private readonly apiKey: string,
+    // Used when the provider reports tokens but no cost, so the spend cap
+    // still counts the call.
+    private readonly price: Price | null = null,
   ) {}
 
   private async post(messages: ChatMsg[], req: ProviderRequest): Promise<{ text: string; usage: Usage }> {
@@ -58,13 +63,12 @@ export class OpenAICompatibleProvider implements ChatProvider {
     if (!res.ok) throw new ProviderError("bad_request", `${this.id} ${res.status}`);
 
     const body = (await res.json()) as Completion;
+    const inputTokens = body.usage?.prompt_tokens ?? 0;
+    const outputTokens = body.usage?.completion_tokens ?? 0;
+    const estimated = this.price ? (inputTokens * this.price.input + outputTokens * this.price.output) / 1_000_000 : 0;
     return {
       text: body.choices?.[0]?.message?.content ?? "",
-      usage: {
-        inputTokens: body.usage?.prompt_tokens ?? 0,
-        outputTokens: body.usage?.completion_tokens ?? 0,
-        usd: body.usage?.cost ?? 0,
-      },
+      usage: { inputTokens, outputTokens, usd: body.usage?.cost ?? estimated },
     };
   }
 

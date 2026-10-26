@@ -3,7 +3,11 @@
 import "server-only";
 import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
-import { DecisionError, type AuditLog, type Catalogue, type ChatModel, type DecisionModel, type SessionStore } from "@/core/ports";
+import { DecisionError, type AuditLog, type Catalogue, type ChatModel, type DecisionModel, type RateLimiter, type SessionStore, type TranscriptStore } from "@/core/ports";
+import { MemoryRateLimiter } from "@/adapters/memory/limiter";
+import { MemoryTranscriptStore } from "@/adapters/memory/transcripts";
+import { SupabaseRateLimiter } from "@/adapters/supabase/limiter";
+import { SupabaseTranscriptStore } from "@/adapters/supabase/transcripts";
 import { JevDecisionModel } from "@/adapters/decision/jev";
 import { JsonCatalogue } from "@/adapters/catalogue/json";
 import { MemoryAuditLog } from "@/adapters/memory/audit";
@@ -20,6 +24,8 @@ export type Deps = {
   catalogue: Catalogue;
   sessions: SessionStore;
   audit: AuditLog;
+  limiter: RateLimiter;
+  transcripts: TranscriptStore;
   keywordFloor: ReturnType<typeof compileFloor>;
   turnDeadlineMs: number;
 };
@@ -48,7 +54,11 @@ async function build(): Promise<Deps> {
     const keyEnv = { openrouter: "OPEN_ROUTER", google: "GOOGLE_STUDIO", alibaba: "ALIBABA_KEY" } as const;
     for (const p of config.providers.chat) {
       const key = process.env[keyEnv[p.id]];
-      if (key) providers.push({ provider: new OpenAICompatibleProvider(p.id, p.model, key), timeoutMs: p.timeoutMs });
+      if (key) {
+        const price = config.prices.chat[`${p.id}/${p.model}`] ?? null;
+        if (!price) console.warn(`[composition] no price for ${p.id}/${p.model}; its calls count as $0 unless the provider reports cost`);
+        providers.push({ provider: new OpenAICompatibleProvider(p.id, p.model, key, price), timeoutMs: p.timeoutMs });
+      }
     }
     if (providers.length === 0) throw new Error("no chat provider configured: set a provider key");
     chat = new ProviderChain(providers);
@@ -56,17 +66,25 @@ async function build(): Promise<Deps> {
 
   let sessions: SessionStore;
   let audit: AuditLog;
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  let limiter: RateLimiter;
+  let transcripts: TranscriptStore;
+  const caps = config.limits;
+  // Supabase is the production database; local dev keeps everything in memory,
+  // even though .env.local holds the keys (same rule as the chat keys, spec 5d).
+  if (process.env.NODE_ENV === "production") {
     sessions = new SupabaseSessionStore();
     audit = new SupabaseAuditLog();
-  } else if (process.env.NODE_ENV !== "production") {
-    sessions = new MemorySessionStore();
-    audit = new MemoryAuditLog();
+    limiter = new SupabaseRateLimiter(caps);
+    transcripts = new SupabaseTranscriptStore();
   } else {
-    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in production");
+    const memSessions = new MemorySessionStore();
+    sessions = memSessions;
+    audit = new MemoryAuditLog();
+    limiter = new MemoryRateLimiter(caps);
+    transcripts = new MemoryTranscriptStore(async (id) => (await memSessions.load(id))?.transcriptConsent === true);
   }
 
-  return { chat, decision: decisionModel(), catalogue: new JsonCatalogue(), sessions, audit, keywordFloor, turnDeadlineMs };
+  return { chat, decision: decisionModel(), catalogue: new JsonCatalogue(), sessions, audit, limiter, transcripts, keywordFloor, turnDeadlineMs };
 }
 
 // LLM_LOCAL_CLI picks the CLI: `claude` (default) or `grok`.

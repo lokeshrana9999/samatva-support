@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-type State = "idle" | "submitting" | "wrong_key" | "error";
+type State = "idle" | "submitting" | "wrong_key" | "too_many" | "error";
 
 export function LoginForm() {
   const router = useRouter();
@@ -10,6 +10,7 @@ export function LoginForm() {
   const [key, setKey] = useState("");
   const [show, setShow] = useState(false);
   const [state, setState] = useState<State>("idle");
+  const [waitMinutes, setWaitMinutes] = useState(15);
   const keyRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent) {
@@ -23,6 +24,12 @@ export function LoginForm() {
     if (res?.status === 204) {
       router.replace("/");
       router.refresh();
+      return;
+    }
+    if (res?.status === 429) {
+      const seconds = Number(res.headers.get("Retry-After") ?? 900);
+      setWaitMinutes(Math.max(1, Math.ceil(seconds / 60)));
+      setState("too_many");
       return;
     }
     if (res?.status === 401) {
@@ -82,6 +89,11 @@ export function LoginForm() {
           </span>
         )}
       </label>
+      {state === "too_many" && (
+        <p role="alert" className="text-[14px] text-danger">
+          Too many tries. Wait {waitMinutes} minutes, then try again.
+        </p>
+      )}
       {state === "error" && (
         <p role="alert" className="text-[14px] text-danger">
           Couldn&apos;t sign in just now. Try again.
@@ -89,7 +101,7 @@ export function LoginForm() {
       )}
       <button
         type="submit"
-        disabled={!email || !key || state === "submitting"}
+        disabled={!email || !key || state === "submitting" || state === "too_many"}
         className="min-h-11 rounded-lg bg-accent px-4 font-semibold text-on-accent disabled:opacity-50"
       >
         {state === "submitting" ? "Checking…" : "Continue"}

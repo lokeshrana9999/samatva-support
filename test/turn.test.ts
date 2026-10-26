@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { ChatError, DecisionError, type ChatModel, type DecisionModel } from "@/core/ports";
-import { runTurn } from "@/core/turn";
+import { runTurn as runTurnRaw } from "@/core/turn";
+import { MemoryRateLimiter } from "@/adapters/memory/limiter";
+
+const who = { ipHash: "ip-test", reviewerHash: "rv-test" };
+const runTurn = (d: Omit<Parameters<typeof runTurnRaw>[0], "limiter"> & { limiter?: Parameters<typeof runTurnRaw>[0]["limiter"] }, i: Omit<Parameters<typeof runTurnRaw>[1], "who">) =>
+  runTurnRaw({ limiter: new MemoryRateLimiter(config.limits), ...d }, { who, ...i });
 import { JsonCatalogue } from "@/adapters/catalogue/json";
 import { EMPTY_NEEDS, type NeedsRecord } from "@/core/needs";
 import type { Msg, Phase, SessionState } from "@/core/types";

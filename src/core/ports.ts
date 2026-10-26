@@ -121,6 +121,26 @@ export interface AuditLog {
   record(e: TurnAudit & { sessionId: string; reviewerHash: string }): Promise<void>;
 }
 
+export type Who = { ipHash: string; reviewerHash: string };
+export type LimitResult = { ok: true } | { ok: false; kind: "daily_conversations" | "hourly_turns" | "spend" };
+
+// Caps are checked before any chat call and after the crisis checks, so a
+// limit never sits between someone in danger and the numbers (spec 9a).
+export interface RateLimiter {
+  startConversation(who: Who): Promise<LimitResult>;
+  startTurn(who: Who): Promise<LimitResult>;
+  addSpend(usd: number): Promise<void>;
+}
+
+export type TranscriptRow = { seq: number; role: "user" | "assistant"; text: string };
+
+// Writes happen only with consent; the Supabase adapter checks it again in
+// the database.
+export interface TranscriptStore {
+  append(sessionId: string, rows: TranscriptRow[]): Promise<void>;
+  deleteSession(sessionId: string): Promise<void>;
+}
+
 export interface SessionStore {
   create(init: { adult: true; consent: boolean }): Promise<SessionState>;
   load(id: string): Promise<SessionState | null>;

@@ -8,6 +8,7 @@ import thresholdsJson from "./thresholds.json";
 import limitsJson from "./limits.json";
 import providersJson from "./providers.json";
 import helpRulesJson from "./help-rules.json";
+import pricesJson from "./prices.json";
 import { HelpRule } from "../src/core/needs";
 
 const Lang = z.enum(["en-IN", "hi-Latn"]);
@@ -86,6 +87,11 @@ const ConfigSchema = z.strictObject({
     maxMessages: z.number().int().positive(),
     loginDays: z.number().int().positive(),
     turnDeadlineMs: z.number().int().positive(),
+    conversationsPerDay: z.number().int().positive(),
+    turnsPerHour: z.number().int().positive(),
+    spendPerDayUsd: z.number().positive(),
+    loginAttempts: z.number().int().positive(),
+    loginWindowMinutes: z.number().int().positive(),
   }),
   providers: z.strictObject({
     chat: z
@@ -104,6 +110,12 @@ const ConfigSchema = z.strictObject({
     jev: z.strictObject({ model: z.string() }),
   }),
   helpRules: z.array(HelpRule).min(1),
+  prices: z.strictObject({
+    note: z.string(),
+    checkedOn: z.iso.date(),
+    source: z.url(),
+    chat: z.record(z.string(), z.strictObject({ input: z.number().nonnegative(), output: z.number().nonnegative() })),
+  }),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -117,4 +129,5 @@ export const config: Config = ConfigSchema.parse({
   limits: limitsJson,
   providers: providersJson,
   helpRules: helpRulesJson,
+  prices: pricesJson,
 });

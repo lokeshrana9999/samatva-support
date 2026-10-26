@@ -3,5 +3,10 @@
   "messageCodePoints": 1000,
   "maxMessages": 40,
   "loginDays": 7,
-  "turnDeadlineMs": 25000
+  "turnDeadlineMs": 25000,
+  "conversationsPerDay": 5,
+  "turnsPerHour": 30,
+  "spendPerDayUsd": 5,
+  "loginAttempts": 10,
+  "loginWindowMinutes": 15
 }

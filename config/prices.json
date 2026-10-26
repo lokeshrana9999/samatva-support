@@ -1,0 +1,10 @@
+{
+  "note": "USD per million tokens, used when a provider doesn't report a call's cost (OpenRouter does; Google AI Studio doesn't). Gemini's price is OpenRouter's listing for the same model, so on Google's free tier the spend counter overestimates; that errs toward hitting the cap early. Jev's price is fixed in its adapter from TypeSafe's docs.",
+  "checkedOn": "2026-10-26",
+  "source": "https://openrouter.ai/api/v1/models",
+  "chat": {
+    "google/gemini-3.5-flash-lite": { "input": 0.3, "output": 2.5 },
+    "openrouter/anthropic/claude-haiku-5.5": { "input": 0.1, "output": 0.5 },
+    "alibaba/qwen-flash": { "input": 0.05, "output": 0.4 }
+  }
+}

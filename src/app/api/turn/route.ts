@@ -10,6 +10,7 @@ import { crisisLinesFor, runTurn } from "@/core/turn";
 import { codePoints, detectLang } from "@/core/text";
 import type { Final, Msg, Phase, SessionState } from "@/core/types";
 import { historyMac } from "@/app/lib/history-mac";
+import { clientIp, ipHash } from "@/app/lib/ip";
 import { SID_COOKIE, requireReviewer, secureCookies } from "@/app/lib/reviewer";
 
 export const maxDuration = 30;
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
 
   const d = await deps();
   const jar = await cookies();
+  const who = { ipHash: ipHash(clientIp(req.headers)), reviewerHash };
   let session: SessionState | null;
   let newSid: string | null = null;
   try {
@@ -116,18 +118,31 @@ export async function POST(req: Request) {
             chat: d.chat,
             decision: d.decision,
             catalogue: d.catalogue,
+            limiter: d.limiter,
             config,
             keywordFloor: d.keywordFloor,
             emit,
             signal: AbortSignal.any([req.signal, AbortSignal.timeout(d.turnDeadlineMs)]),
             now: Date.now,
           },
-          { session: turnSession, messages },
+          { session: turnSession, messages, who },
         );
         next.historyMac = historyMac([...messages, { role: "assistant", text: final.reply }]);
         const saved = await d.sessions.save(next);
-        // Written after the response, so it adds no user-facing latency (D15).
-        after(() => d.audit.record({ ...audit, sessionId: turnSession.id, reviewerHash }));
+        // Written after the response, so they add no user-facing latency (D15).
+        // A limit reply isn't part of the conversation the user consented to
+        // save, so only real turns reach the transcript.
+        after(async () => {
+          await d.audit.record({ ...audit, sessionId: turnSession.id, reviewerHash });
+          await d.limiter.addSpend(audit.costUsd);
+          if (turnSession.transcriptConsent && saved === "ok" && !final.limit) {
+            const seq = messages.length - 1;
+            await d.transcripts.append(turnSession.id, [
+              { seq, role: "user", text: last.text },
+              { seq: seq + 1, role: "assistant", text: final.reply },
+            ]);
+          }
+        });
         if (saved === "conflict") {
           send("final", {
             ...final,

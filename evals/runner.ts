@@ -11,6 +11,7 @@ import { JevDecisionModel } from "@/adapters/decision/jev";
 import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
 import { ProviderChain } from "@/adapters/chat/chain";
 import { MemorySessionStore } from "@/adapters/memory/sessions";
+import { MemoryRateLimiter } from "@/adapters/memory/limiter";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { assessRisk } from "@/core/gates/risk";
 import { HELP_TYPE_LABEL } from "@/core/needs";
@@ -191,8 +192,8 @@ async function runRecommendation(target: string) {
     for (let i = 0; i < c.turns.length; i++) {
       messages.push({ role: "user", text: c.turns[i] });
       const out = await runTurn(
-        { chat, decision, catalogue, config, keywordFloor, emit: () => {}, signal: AbortSignal.timeout(300_000), now: Date.now },
-        { session, messages },
+        { chat, decision, catalogue, limiter: new MemoryRateLimiter(config.limits, Date.now, true), config, keywordFloor, emit: () => {}, signal: AbortSignal.timeout(300_000), now: Date.now },
+        { session, messages, who: { ipHash: "eval", reviewerHash: "eval" } },
       );
       usd += out.audit.costUsd;
       session = out.session;
@@ -298,8 +299,8 @@ async function runRedTeam(target: string) {
     for (const text of c.turns) {
       messages.push({ role: "user", text });
       const out = await runTurn(
-        { chat, decision, catalogue, config, keywordFloor, emit: () => {}, signal: AbortSignal.timeout(300_000), now: Date.now },
-        { session, messages },
+        { chat, decision, catalogue, limiter: new MemoryRateLimiter(config.limits, Date.now, true), config, keywordFloor, emit: () => {}, signal: AbortSignal.timeout(300_000), now: Date.now },
+        { session, messages, who: { ipHash: "eval", reviewerHash: "eval" } },
       );
       usd += out.audit.costUsd;
       session = out.session;

@@ -13,6 +13,8 @@ import {
   type ChatModel,
   type ChatMsg,
   type DecisionModel,
+  type RateLimiter,
+  type Who,
   type TurnAudit,
   type Usage,
 } from "./ports";
@@ -48,6 +50,7 @@ export type TurnDeps = {
   chat: ChatModel;
   decision: DecisionModel;
   catalogue: Catalogue;
+  limiter: RateLimiter;
   config: Config;
   keywordFloor: (text: string) => FloorResult;
   emit: (phase: Phase) => void;
@@ -55,7 +58,7 @@ export type TurnDeps = {
   now: () => number;
 };
 
-export type TurnInput = { session: SessionState; messages: Msg[] };
+export type TurnInput = { session: SessionState; messages: Msg[]; who: Who };
 export type TurnOutput = { final: Final; session: SessionState; audit: TurnAudit };
 
 export function crisisLinesFor(config: Config, beingHarmed: boolean): CrisisLine[] {
@@ -239,6 +242,15 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   if (needsResult) {
     s.needs = needsResult.needs;
     addUsage(needsResult.usage);
+  }
+
+  // Caps come after both crisis checks (the keyword floor and Jev's risk read)
+  // and before any chat call, so a limit never hides the handoff (spec 9a).
+  const first = s.userTurns === 0;
+  const conv = first ? await deps.limiter.startConversation(input.who) : ({ ok: true } as const);
+  const turnLimit = conv.ok ? await deps.limiter.startTurn(input.who) : conv;
+  if (!turnLimit.ok) {
+    return finish({ reply: strings.limits[turnLimit.kind][lang], limit: { kind: turnLimit.kind } }, "limit");
   }
 
   s.userTurns += 1;
