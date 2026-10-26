@@ -106,8 +106,9 @@ export function NeedHelpSheet({ lines, trigger }: { lines: CrisisLine[]; trigger
         )}
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-xl border border-line bg-surface p-6 md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-none md:rounded-l-xl">
+        {/* Above the pinned header (z-40) and the menu (z-50). */}
+        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/50" />
+        <Dialog.Content className="fixed inset-x-0 bottom-0 z-[60] max-h-[85dvh] overflow-y-auto rounded-t-xl border border-line bg-surface p-6 shadow-2xl md:inset-x-auto md:inset-y-0 md:right-0 md:max-h-none md:w-[420px] md:rounded-none md:rounded-l-xl">
           <Dialog.Title className="font-serif text-[22px] leading-7 font-semibold">Talk to a person now</Dialog.Title>
           <Dialog.Description className="mt-2 text-muted">
             These are free helplines in India. If you&apos;re in immediate danger, call 112.

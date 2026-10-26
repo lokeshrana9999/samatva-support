@@ -19,10 +19,21 @@ export type MenuActions = {
 const itemClass =
   "flex min-h-11 cursor-pointer items-center rounded-md px-3 text-[15px] outline-none data-[highlighted]:bg-user-bubble";
 
-export function Header({ lines, menu }: { lines: CrisisLine[]; menu?: MenuActions }) {
+// Pinned to the top on every page, so "Need help now?" is always one tap away.
+// `children` sits under the header row in the same pinned block (the chat's
+// stage stepper).
+export function Header({
+  lines,
+  menu,
+  children,
+}: {
+  lines: CrisisLine[];
+  menu?: MenuActions;
+  children?: React.ReactNode;
+}) {
   const { theme, setTheme } = useTheme();
   return (
-    <header className="border-b border-line">
+    <header className="sticky top-0 z-40 border-b border-line bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
       <div className="mx-auto flex max-w-[680px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="font-serif text-[20px] font-semibold">
           samatva support
@@ -78,6 +89,7 @@ export function Header({ lines, menu }: { lines: CrisisLine[]; menu?: MenuAction
           )}
         </div>
       </div>
+      {children && <div className="mx-auto max-w-[680px] px-4 pb-3 sm:px-6">{children}</div>}
     </header>
   );
 }

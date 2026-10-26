@@ -107,6 +107,82 @@ body {
   outline-offset: 2px;
 }
 
+/* Interactive states, in one place so every control behaves alike. Tailwind
+   v4's reset gives buttons the default cursor, which made them read as dead. */
+button:not(:disabled),
+summary,
+label:has(> input[type="checkbox"]),
+[role="menuitem"],
+[role="menuitemradio"],
+[role="menuitemcheckbox"] {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  summary {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      filter 150ms ease,
+      text-decoration-color 150ms ease,
+      text-underline-offset 150ms ease;
+  }
+}
+
+/* Filled buttons and button-like links (accent, urgent call buttons, delete)
+   darken a step on hover and a little more when pressed; dark theme lightens. */
+@media (hover: hover) {
+  :is(button, a)[class*="bg-accent"]:not(:disabled):hover,
+  :is(button, a)[class*="bg-urgent-btn"]:hover,
+  :is(button, a)[class*="bg-danger"]:not(:disabled):hover {
+    filter: brightness(0.92);
+  }
+  /* The amber "Need help now?" button is near-black in dark mode, where a
+     brightness step barely shows, so it mixes in its border colour instead. */
+  :is(button, a)[class*="bg-urgent-bg"]:not(:disabled):hover {
+    background-color: color-mix(in srgb, var(--urgent-bg) 72%, var(--urgent-border));
+  }
+  :root[data-theme="dark"] :is(button, a)[class*="bg-accent"]:not(:disabled):hover,
+  :root[data-theme="dark"] :is(button, a)[class*="bg-urgent-btn"]:hover {
+    filter: brightness(1.12);
+  }
+
+  /* Outlined and plain buttons get a soft fill. */
+  button[class*="border-input-border"]:not(:disabled):hover,
+  button[class*="border-danger"]:not(:disabled):hover,
+  summary:hover {
+    background-color: var(--user-bubble);
+  }
+
+  /* Text links and underlined text buttons: a thicker underline and the
+     accent colour, so a hover never relies on colour alone. */
+  a:not([class*="bg-"]):hover,
+  button.underline:not(:disabled):hover {
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @media (hover: hover) {
+    :root:not([data-theme="light"]) :is(button, a)[class*="bg-accent"]:not(:disabled):hover,
+    :root:not([data-theme="light"]) :is(button, a)[class*="bg-urgent-btn"]:hover {
+      filter: brightness(1.12);
+    }
+  }
+}
+
+:is(button, a)[class*="bg-accent"]:not(:disabled):active,
+:is(button, a)[class*="bg-urgent-btn"]:active {
+  filter: brightness(0.85);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .fade-in {
     animation: fade-in 150ms ease-out;

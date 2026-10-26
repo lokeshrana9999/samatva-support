@@ -3,6 +3,7 @@
 // stages and the crisis handoff. The conversation lives in React state
 // mirrored to sessionStorage; the server owns stage, turn count and the locks
 // (design D50).
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -319,7 +320,14 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
           onStartOver: () => reset(),
           onSignOut: signOut,
         }}
-      />
+      >
+        {conv.started &&
+          (inHandoff ? (
+            <p className="text-[14px] font-medium text-muted">Getting you to people who can help</p>
+          ) : (
+            <StageStepper stage={stage} />
+          ))}
+      </Header>
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
@@ -364,12 +372,7 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
           />
         ) : (
           <>
-            {inHandoff ? (
-              <p className="text-[14px] font-medium text-muted">Getting you to people who can help</p>
-            ) : (
-              <StageStepper stage={stage} />
-            )}
-            <DisclosureBanner />
+            <SafetyBanner elevated={last?.trace.risk.final === "elevated" && !inHandoff} lines={lines} />
 
             {inHandoff && (
               <section className="rounded-xl border-2 border-urgent-border bg-urgent-bg p-4 text-urgent-ink">
@@ -381,13 +384,6 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
                 </div>
                 <SourcesCaption lines={lines} />
               </section>
-            )}
-
-            {last?.trace.risk.final === "elevated" && !inHandoff && (
-              <div className="rounded-lg border border-line bg-surface p-3">
-                <p className="text-[14px] font-medium">If things get worse, call:</p>
-                <CrisisLineList lines={lines} variant="compact" />
-              </div>
             )}
 
             <div role="log" aria-live="off" className="flex flex-col gap-4">
@@ -402,8 +398,10 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
                     </p>
                   </div>
                 ) : (
-                  <div key={i} className="fade-in">
-                    <p lang={m.lang} className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  <div key={i} className="fade-in flex items-start gap-3">
+                    <AssistantAvatar />
+                    <div className="min-w-0 flex-1">
+                    <p lang={m.lang} className="pt-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">
                       {m.text}
                     </p>
                     {m.replaced && (
@@ -418,16 +416,13 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
                     {/* Cards come out of the DOM in a handoff, not just hidden (D49). */}
                     {m.cards && !inHandoff && (
                       <div className="mt-4 flex flex-col gap-4">
+                        {/* A crisis line among the help types shows in the
+                            safety banner above, not again here. */}
                         <HelpTypeChips labels={m.helpTypes ?? []} />
-                        {m.helpTypes?.includes("A crisis line, now") && (
-                          <div className="rounded-lg border border-urgent-border bg-urgent-bg p-3 text-urgent-ink">
-                            <p className="text-[14px] font-medium">Talk to a person now:</p>
-                            <CrisisLineList lines={lines} variant="compact" />
-                          </div>
-                        )}
                         <RecommendationCards cards={m.cards} />
                       </div>
                     )}
+                    </div>
                   </div>
                 ),
               )}
@@ -645,21 +640,56 @@ function Disclosure() {
   );
 }
 
-function DisclosureBanner() {
+// The assistant's avatar: a sprout, made with the Grok CLI's image tool. A
+// non-human character on purpose, since the assistant never presents as a
+// person. Decorative, so screen readers skip it; replies are already
+// announced as "Assistant:".
+function AssistantAvatar() {
+  return (
+    <Image
+      src="/avatar.webp"
+      alt=""
+      aria-hidden
+      width={36}
+      height={36}
+      className="mt-0.5 size-9 shrink-0 rounded-full border border-line bg-[#f0e8d6]"
+    />
+  );
+}
+
+// One safety banner: the disclosure, and the way to a person. Normally that's
+// 112; once risk reads elevated, it's the full list, so the screen never shows
+// two crisis boxes saying the same thing.
+function SafetyBanner({ elevated, lines }: { elevated: boolean; lines: CrisisLine[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-lg border border-line bg-surface px-3 py-2 text-[14px] leading-5">
+    <div
+      className={`rounded-lg border px-3 py-2 text-[14px] leading-5 ${
+        elevated ? "border-urgent-border bg-urgent-bg text-urgent-ink" : "border-line bg-surface"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span>
-          AI assistant · not a clinician · not an emergency service ·{" "}
-          <a className="font-medium underline" href="tel:112">
-            emergency: call 112
-          </a>
+          AI assistant · not a clinician · not an emergency service
+          {!elevated && (
+            <>
+              {" · "}
+              <a className="font-medium underline underline-offset-2" href="tel:112">
+                emergency: call 112
+              </a>
+            </>
+          )}
         </span>
-        <button className="min-h-11 shrink-0 px-2 underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <button className="min-h-11 shrink-0 px-2 underline underline-offset-2" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           Details<span className="sr-only"> about this assistant</span>
         </button>
       </div>
+      {elevated && (
+        <div className="pb-2">
+          <p className="font-medium">If things get worse, call:</p>
+          <CrisisLineList lines={lines} variant="compact" />
+        </div>
+      )}
       {open && (
         <div className="pb-2 text-[15px]">
           <Disclosure />
