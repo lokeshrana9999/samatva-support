@@ -182,7 +182,9 @@ async function chatTarget(target: string): Promise<ChatModel> {
 
 async function runRecommendation(target: string) {
   if (!process.env.TYPESAFE_API_KEY) throw new Error("TYPESAFE_API_KEY must be set for the recommendation suite");
-  const { cases } = JSON.parse(readFileSync(path.join(ROOT, "evals/cases/recommendation.json"), "utf8")) as { cases: RecCase[] };
+  const all = (JSON.parse(readFileSync(path.join(ROOT, "evals/cases/recommendation.json"), "utf8")) as { cases: RecCase[] }).cases;
+  const only = arg("case", "");
+  const cases = only ? all.filter((c) => c.id.startsWith(only)) : all;
   const chat = await chatTarget(target);
   const decision = new JevDecisionModel(config.providers.jev.model, { timeoutMs: 5000, maxRetries: 2, deadlineMs: 20000 });
   const catalogue = new JsonCatalogue();

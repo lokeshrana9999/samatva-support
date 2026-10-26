@@ -27,6 +27,9 @@ export class ProviderChain implements ChatModel {
         const { action, usage } = await provider.call({ ...req, signal });
         return { action, usage, provider: provider.id, model: provider.model, providersTried: tried };
       } catch (e) {
+        // Kind and message only; neither carries message content.
+        const kind = e instanceof ProviderError ? e.kind : "unknown";
+        if (kind !== "auth") console.warn(`[chain] ${provider.id} failed (${kind}): ${(e as Error).message.slice(0, 160)}`);
         if (e instanceof ProviderError && e.kind === "rate_limited") {
           this.skipUntil.set(provider.id, this.now() + SKIP_AFTER_429_MS);
         }

@@ -10,15 +10,15 @@ A deployed support assistant for Amaha's AI Engineer build, option 1: "a convers
 | # | decision | reason |
 |---|---|---|
 | 1 | Build option 1, the support assistant | It answers the brief Amaha wrote, word for word, instead of asking reviewers to accept a reframe. |
-| 2 | Recommendations name real Amaha therapists and services, with direct links to their public pages | It's a demo for Amaha's hiring team, so routing into Amaha's own catalogue is the realistic product. samatva's no-paid-referral rule was written for an open-source tool and doesn't apply here. |
-| 2a | Guards on the catalogue: only fields copied from Amaha's public pages are shown, never model-written claims about a clinician; never shown in a risk handoff (crisis lines only there); footer says "independent demo by Lokesh, not affiliated with Amaha" | Real clinicians' names sit behind an AI recommendation they never agreed to, so the app must not invent credentials or route someone in crisis to a booking page. |
+| 2 | Recommendations link to real Amaha service pages and show synthetic therapist profiles, each labelled "sample profile, not a real clinician" and linking to Amaha's real booking page for that kind of help (amended 2026-10-26; it replaces "real Amaha therapists by name") | Amaha's terms (updated 25 Jul 2025) forbid copying site content without written permission, and list scraping and collecting others' personal information as prohibited uses. Linking isn't restricted. Routing into Amaha's own services is still the realistic product; samatva's no-paid-referral rule was written for an open-source tool and doesn't apply here. |
+| 2a | Guards on the catalogue: cards show only catalogue fields, never model-written claims about a clinician; service summaries are our own words; nothing shows in a risk handoff (crisis lines only there); footer says "independent demo by Lokesh, not affiliated with Amaha" | The app must not invent credentials, pass off samples as real people, or route someone in crisis to a booking page. Amaha's real directory would plug in behind the `Catalogue` port. |
 | 3 | No samatva skills or ladder; the flow follows Amaha's brief | Stay close to what Amaha asked for. samatva is cited only as prior work on putting restraint in a controller. |
 | 3a | Shape: a controller owns the stages and gates; inside them, the LLM converses and calls catalogue search tools | Covers what the role asks for (agents, tool-calling, retrieval, evals, safe by default), and the gates sit where the model can't talk its way past them. |
 | 4 | Risk gate: a Jev typed question on every user turn (tier `none`, `elevated` or `imminent`, plus yes/no for self-harm, harm to others, being harmed), thresholds in config, and an English plus Hinglish keyword floor that fires even when Jev says none | Jev returns calibrated choices, so the tier is a number the controller acts on, and the keyword floor still works if the model misses. |
 | 4a | Output filter: deterministic checks (link allowlist, every therapist or service name matches a tool result, length cap) plus Jev yes/no questions per reply (diagnosis? medical or medication advice? claims to be human?); regenerate once with the violation named, then fall back to a stock line | Exact checks are provable in evals; Jev covers the paraphrase cases a regex misses. |
 | 4b | Fail closed: if a Jev call errors or times out, the risk gate treats the turn as `elevated` and the filter blocks the reply | A safety gate that opens when its model is down isn't a gate. |
 | 5 | Next.js (App Router, TypeScript) on Vercel, one repo | Lokesh's stack; API routes keep every key server-side. |
-| 5a | Supabase Postgres holds the catalogue, a content-free audit log, rate-limit and spend counters, and opted-in transcripts. No Supabase Auth | One store for everything. Access is the reviewer login in decision 11, and limits apply per IP and per reviewer. |
+| 5a | Supabase Postgres holds sessions, a content-free audit log, rate-limit and spend counters, and opted-in transcripts. No Supabase Auth | One store for everything. Access is the reviewer login in decision 11, and limits apply per IP and per reviewer. |
 | 5b | Transcripts are saved only with opt-in consent (first-screen notice plus checkbox), deleted automatically after 30 days, readable only server-side (RLS, service role), and deletable by the user from the UI | It's a public link, so real people may type real things despite the synthetic-data rule. |
 | 5c | The model layer is a provider chain behind one interface. Deployed: `OPEN_ROUTER`, `GOOGLE_STUDIO`, `ALIBABA_KEY`, in a configurable order, failing over to the next on error, timeout or rate limit. Local dev and evals: the Claude CLI on Haiku, and the Grok CLI as a second eval target | Uses keys Lokesh already has, and survives one provider being down. |
 | 5d | CLI adapters run only when `NODE_ENV !== 'production'` and an explicit `LLM_LOCAL_CLI` flag is set; the production build excludes them | Subscription CLIs are for Lokesh's own development and must never serve the public link. |
@@ -100,7 +100,7 @@ Tools allowed per stage: none in `intake` and `understand`, the two search tools
 
 ### catalogue
 
-A hand-curated set of Amaha service pages and 10 to 20 named therapist profiles, copied from Amaha's public pages. Each row stores only listed fields (name, title, languages, specialties, modes, profile URL) plus the source URL and the date it was copied. A link check in the eval run fails any URL that no longer resolves. Before copying, read Amaha's site terms and robots.txt; hand-copy, never scrape.
+Six real Amaha service pages, linked with one-line summaries in our own words, and 14 synthetic therapist profiles (invented name, title, languages, specialties, modes, cities), each labelled as a sample and linking to Amaha's real booking page for its kind of help (decision 2). Nothing is copied from Amaha's site: its terms forbid it. URLs were checked on 2026-10-26.
 
 ### storage
 
@@ -174,7 +174,7 @@ Each step ends deployed, with the evals that exist so far passing.
 ## open items
 
 - Jev's API shape, limits and Hinglish quality: settled. The API and limits come from TypeSafe's docs and console (`docs/design.md`), and Hinglish was measured by the step 2 risk suite: 100% imminent recall on 18 Hinglish cases.
-- Amaha's site terms for copying public therapist profiles: read before step 3.
+- Amaha's site terms: read on 2026-10-26. They forbid copying content, so the catalogue uses synthetic therapists and linked services (decision 2).
 - Crisis numbers: verify each from its official source in step 1.
 - Model ids per provider: pick in step 1 and step 6 from each provider's current list.
 - `CLAUDE.md` says "synthetic data only". Real therapist profiles are public data, which Amaha's brief allows; conversations and eval data stay synthetic. Update that line when the spec is approved.

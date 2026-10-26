@@ -186,9 +186,11 @@ type Final = {
 
 type Card = {                 // catalogue fields only (spec 2a)
   id: string; kind: 'therapist' | 'service';
-  name: string; title: string; languages: string[];
-  specialties: string[]; modes: string[]; cities: string[];
-  profileUrl: string; sourceUrl: string; copiedAt: string;
+  name: string; title: string; summary: string | null;
+  languages: string[]; specialties: string[];
+  modes: string[]; cities: string[];
+  url: string;                // an allowlisted amahahealth.com page
+  sample: boolean;            // true for every therapist (spec 2)
 };
 
 type CrisisLine = {           // from config/crisis-lines.json
@@ -693,31 +695,28 @@ Writes go through an `append_transcript` function that inserts only when `sessio
 
 ### catalogue
 
+As built in step 3, the catalogue is not in Supabase. `catalogue/services.json` (six real Amaha service pages, linked, summaries in our own words) and `catalogue/therapists.json` (14 synthetic profiles) are zod-validated at module load, and `src/adapters/catalogue/json.ts` serves them in every environment. With tens of rows, a database added a seed step and nothing else. The table sketch below stays as the shape a real directory would take behind the same port.
+
 ```sql
 create table catalogue_therapists (
   id            text primary key,     -- slug
-  name          text not null,        -- shown: copied from public page
+  name          text not null,        -- shown
   title         text not null,        -- shown
   languages     text[] not null,      -- shown
   specialties   text[] not null,      -- shown, as listed
   modes         text[] not null,      -- shown
   cities        text[] not null default '{}',
-  profile_url   text not null,        -- shown
+  url           text not null,        -- shown: an amahahealth.com page
   help_types    text[] not null,      -- internal index, never shown
   concern_areas text[] not null,      -- internal index, never shown
-  source_url    text not null,
-  copied_on     date not null,
+  sample        boolean not null,     -- every row today
   active        boolean not null default true
 );
-create index on catalogue_therapists using gin (concern_areas);
-create index on catalogue_therapists using gin (help_types);
--- catalogue_services: same pattern with name, summary, modes, cities,
--- url, help_types, source_url, copied_on, active
 ```
 
-`help_types` and `concern_areas` are Lokesh's mapping from the listed specialties to the enums; they drive search and never reach the screen (spec 2a). Search filters on `active`, help type, mode and city, then ranks by overlap between requested concerns and `concern_areas`, ties broken by id so results are repeatable.
+`help_types` and `concern_areas` map each profile to the enums; they drive search and never reach the screen (spec 2a). Search filters on help type, mode and city (city only for in-person). A language preference narrows the list only when someone speaks it, so a rare language never leaves the person with nobody. Results then rank by overlap between requested concerns and `concern_areas`, ties broken by id so results are repeatable.
 
-The source of truth is `catalogue/therapists.json` and `catalogue/services.json` in the repo, zod-validated. `scripts/seed-catalogue.ts` upserts them into Supabase and marks missing ids inactive. Evals read the same JSON through the in-memory adapter, so a catalogue change shows up as a diff in review and in the eval results together.
+The app and the evals read the same JSON through the same adapter, so a catalogue change shows up as a diff in review and in the eval results together.
 
 ### access and purge
 
@@ -914,16 +913,16 @@ Layout top to bottom: header, stage stepper, disclosure banner, transcript, turn
 
 | part | service card | therapist card |
 |---|---|---|
-| eyebrow | SERVICE | THERAPIST |
+| eyebrow | SERVICE | THERAPIST · SAMPLE PROFILE |
 | h3 | service name | therapist name |
-| line 2 | modes, languages | title |
+| line 2 | our one-line summary | title |
 | line 3 | — | "Speaks " + languages |
 | line 4 | — | first 3 specialties, then "+N" (expands in place) |
-| line 5 | — | modes, then `cities` joined with commas, if any |
-| link | "View on amahahealth.com" | "View profile" |
-| caption | "From Amaha's public page, copied " + `copiedAt` | same |
+| line 5 | modes, cities | modes, then `cities` joined with commas, if any |
+| link | "View on amahahealth.com" | "Book through Amaha" (the real booking page for that kind of help) |
+| caption | "Summary in our own words; details are on Amaha's page." | "Sample profile, not a real clinician. The link goes to Amaha's real booking page for this kind of help." |
 
-- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "View Dr X's profile on amahahealth.com, opens in a new tab".
+- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "Book through Amaha for Ira Menon on amahahealth.com, opens in a new tab".
 - No photos, ratings, prices, or availability.
 - A missing field is omitted, never filled with a placeholder.
 - Help-type chips are plain labels, not buttons.
@@ -1149,7 +1148,7 @@ Run each UI check on a 360px phone viewport and on desktop, in light and dark.
 ### recommendation and close
 
 14. Every card field matches its catalogue row exactly; no card shows a photo, rating or model text.
-15. Every card link opens the catalogue `profileUrl` in a new tab.
+15. Every card link opens its allowlisted `url` in a new tab, and every therapist card says it is a sample profile.
 16. After recommend, the wrap-up panel shows Delete my conversation and Start over.
 17. Delete calls `DELETE /api/conversation` with or without consent, clears `sessionStorage`, shows the matching confirm copy, and the next message sends `start`.
 
@@ -1235,7 +1234,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 | D35 | IP hash = HMAC of IP plus IST date [A18] | No plain IPs, and hashes don't link across days. |
 | D36 | Limits as one atomic upsert-with-cap function [A19] | Concurrent turns can't both pass a cap. |
 | D37 | Purges as pg_cron jobs [A20] | No public purge endpoint to secure. |
-| D38 | Catalogue source of truth is repo JSON, seeded to Supabase [A21] | Changes are reviewable diffs, and evals use the same rows. |
+| D38 | Catalogue source of truth is repo JSON, served by a JSON adapter in every environment; no Supabase copy (changed in step 3) [A21] | Changes are reviewable diffs, evals use the same rows, and tens of rows don't need a database. |
 | D39 | Config as zod-validated JSON [A22] | Bad config fails the build, and reviewers can read it. |
 | D40 | Supabase in Mumbai, Vercel functions in `bom1` [A23] | Users and data are in India. |
 | D41 | Text plus `check` constraints, not Postgres enums [A24] | Adding a value is one line. |
