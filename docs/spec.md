@@ -184,7 +184,13 @@ Each step ends deployed, with the evals that exist so far passing.
    - Live checks: a consented conversation wrote 4 transcript rows expiring in 30 days; delete removed them and the session, and the content-free audit rows stayed; a conversation without consent wrote none. Limit buckets filled as expected. The limit function returns 401 without the server key. The login cap answered 429 on the 10th try in the window.
    - Purge jobs: scheduled by the migration, which succeeded. I haven't seen one run yet; the first `purge-sessions` run is due within the hour.
    - Local dev keeps sessions, audit, limits and transcripts in memory; it no longer writes to the production database.
-6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README.
+6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README. Done and deployed 2026-10-26, except Alibaba and OpenRouter, which Lokesh set aside:
+   - `/evals`: a scorecard for four suites, built from the committed results (no model calls), with "Where it falls short" lists and an "About this demo" section (`#about`) naming every service that sees message text.
+   - Intake disclosure: a new line says message text goes to AI services (TypeSafe and the providers under About this demo), with a link to that section. This closes design open item 2.
+   - Fixed copy: an adversarial review fixed 29 issues across the stock lines and UI strings. `test/copy.test.ts` checks that no Hinglish fixed text has a gendered first-person verb, a link, or a "come back" invitation. Hinglish still needs a fluent read.
+   - Magic link (D54): `/join#k=<key>` signs a reviewer in after they enter only an email. `scripts/magic-link.ps1` copies the link to the clipboard without printing it. Checked live: no key goes to `/login`, the fragment is stripped at once, and a wrong key shows "This link no longer works". The real-key sign-in through the link is Lokesh's to try.
+   - README rewritten for reviewers; `docs/loom.md` holds the Loom script.
+   - Fixed a regression: since `d80cd32` the production bundle had shipped the Claude CLI adapter (never called). `npm run build` now runs `scripts/check-bundle.mjs`, so such a deploy fails.
 7. Loom outline rehearsal, record, flip the repo public.
 
 ## open checks, closed 2026-10-26
