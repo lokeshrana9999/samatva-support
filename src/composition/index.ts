@@ -24,9 +24,10 @@ export type Deps = {
   turnDeadlineMs: number;
 };
 
-// The CLI takes 10 to 20 s per call, so local runs get a longer turn deadline
-// than the 25 s that fits Vercel's 30 s limit (design D14).
-const LOCAL_CLI_DEADLINE_MS = 120_000;
+// The CLI takes 10 to 60 s per call and a recommend turn can make three, so
+// local runs get a longer turn deadline than the 25 s that fits Vercel's 30 s
+// limit (design D14).
+const LOCAL_CLI_DEADLINE_MS = 240_000;
 
 const g = globalThis as unknown as { __samatvaDeps?: Promise<Deps> };
 

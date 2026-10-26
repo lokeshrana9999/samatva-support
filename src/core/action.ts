@@ -7,11 +7,18 @@ const ToolCall = z.discriminatedUnion("name", [
   z.strictObject({ name: z.literal("search_services"), args: z.record(z.string(), z.unknown()) }),
 ]);
 
-export const Action = z.strictObject({
-  reply: z.string().max(1200),
-  tool: ToolCall.optional(),
-  show: z.array(z.string()).max(5).optional(),
-});
+// `reply` may be left out on a tool call, since it's ignored there; models
+// often send {"tool": ...} alone. A message without a tool must have one.
+export const Action = z
+  .strictObject({
+    reply: z.string().max(1200).default(""),
+    tool: ToolCall.optional(),
+    show: z.array(z.string()).max(5).optional(),
+  })
+  .refine((a) => a.tool !== undefined || a.reply.trim().length > 0, {
+    message: "reply is required when no tool is called",
+    path: ["reply"],
+  });
 
 export type Action = z.infer<typeof Action>;
 

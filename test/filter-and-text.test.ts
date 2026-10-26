@@ -52,3 +52,12 @@ describe("action parsing", () => {
     expect(parseAction("no json here").ok).toBe(false);
   });
 });
+
+describe("action shape", () => {
+  it("accepts a tool call with no reply, and rejects an empty reply without a tool", () => {
+    const tool = parseAction('{"tool": {"name": "search_services", "args": {"helpTypes": ["therapist"]}}}');
+    expect(tool.ok).toBe(true);
+    expect(parseAction('{"reply": "  "}').ok).toBe(false);
+    expect(parseAction("{}").ok).toBe(false);
+  });
+});
