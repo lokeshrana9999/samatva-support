@@ -165,7 +165,13 @@ Each step ends deployed, with the evals that exist so far passing.
    - Live check: a message with no keyword ("given away my books… want it to be over this week") reached the handoff on Jev alone in 276 ms, and audit rows land in `audit_events` with no text.
    - Not done: running the reversed option order (design D32), and recording Jev's latency on real traffic beyond these spot checks.
    - Seen live: asked for a diagnosis, Gemini refused it without the filter firing, but used feminine first-person verbs ("de sakti hoon") despite the prompt's no-gender rule. The filter doesn't check for gendered verbs yet; step 4 could add one.
-3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite.
+3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite. Done and deployed 2026-10-26:
+   - Catalogue: six linked Amaha services and 14 sample therapists (decision 2), served from repo JSON, not Supabase (design D38).
+   - Needs record from Jev each understand turn, in parallel with the risk call; "enough" rule, rules table, tool loop narrowed to the picked help types; the session moves to close after recommending.
+   - Recommendation suite on the Claude CLI: 24 of 24 reach recommend (2.1 turns on average) with the expected help types, 20 of 24 match exactly, 3 get an unasked-for crisis line, no stray cards or links, no stock fallbacks. Numbers are in the README.
+   - Fixes this step turned up: Jev's medical-advice question flagged every recommendation, so it now covers medicines and doses only; tool calls without a `reply` were rejected; the CLI timeout was too short; Gemini answered English in Hinglish, so the controller now states the reply language in every prompt.
+   - Process miss: the first runs of this suite used the production Google key from Lokesh's machine, against decision 5c. Local dev and evals are now CLI-only in code (decision 5d).
+   - Live check: an English couples conversation and a Hinglish work-anxiety one each reached recommendations with sample cards on turn 2, in 5 to 7 s.
 4. Output filter and regenerate path. Red-team suite.
 5. Limits and spend cap; transcripts with consent, delete, 30-day purge.
 6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README.
