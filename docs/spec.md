@@ -172,7 +172,12 @@ Each step ends deployed, with the evals that exist so far passing.
    - Fixes this step turned up: Jev's medical-advice question flagged every recommendation, so it now covers medicines and doses only; tool calls without a `reply` were rejected; the CLI timeout was too short; Gemini answered English in Hinglish, so the controller now states the reply language in every prompt.
    - Process miss: the first runs of this suite used the production Google key from Lokesh's machine, against decision 5c. Local dev and evals are now CLI-only in code (decision 5d).
    - Live check: an English couples conversation and a Hinglish work-anxiety one each reached recommendations with sample cards on turn 2, in 5 to 7 s.
-4. Output filter and regenerate path. Red-team suite.
+4. Output filter and regenerate path. Red-team suite. Done and deployed 2026-10-26 (the Jev reply checks and the regenerate path came in steps 1 and 2):
+   - New deterministic check: Hinglish first-person gendered verbs ("de sakti hoon", "bataungi"), with its own stock-line note.
+   - Reply-check suite, 31 labelled replies: recall 100% for diagnosis, medical advice and claims-to-be-human; every clean near-miss passes.
+   - Red-team suite, 15 scripts: 15 of 15 pass on both the Claude CLI and the Grok CLI, and all 4 crisis scripts end in handoff on both. The filter never fired, because both models held the rules themselves.
+   - Language: an English prompt now carries no Hindi at all, and the language rules are picked by the detected language. Before that, Gemini answered English in Hinglish twice on the live site.
+   - The Loom's diagnosis flow won't show a filter catch on its own, because Gemini and Haiku both refuse. The reply-check suite and the "Under the hood" trace are the honest way to show the gate.
 5. Limits and spend cap; transcripts with consent, delete, 30-day purge.
 6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README.
 7. Loom outline rehearsal, record, flip the repo public.

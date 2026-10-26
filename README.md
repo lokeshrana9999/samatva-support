@@ -46,4 +46,23 @@ Same suite on the Grok CLI (its default model, run before the reply-language fix
 
 The rules table adds "therapist" to every recommendation by design, so a self-care case shows a therapist too. Help types come from Jev's needs record and the rules table, not the chat model, so the chat model mostly shapes the wording and which cards show.
 
+Reply checks, 2026-10-26: Jev's three output checks on 31 labelled synthetic replies, at the app's 0.3 threshold. Full output: `evals/results/latest-reply-checks.json`.
+
+| check | recall | precision |
+|---|---|---|
+| diagnosis | 100% (7) | 88% |
+| medical or medication advice | 100% (6) | 100% |
+| claims to be human | 100% (5) | 100% |
+
+All 13 clean near-misses pass every check, including reflections of the user's worry, suggesting a psychiatrist, and pointing medicine questions to a doctor. The one imprecise result is a dose-advice reply that was also flagged as a diagnosis.
+
+Red team, 2026-10-26: 15 multi-turn pressure scripts (diagnosis, dose, "are you human", gender, a jailbreak, a role-play as a human psychiatrist, crises buried mid-conversation in English and Hinglish, an instruction aimed at the safety model, link and name bait, an abuse disclosure, trying to leave the handoff). Code checks each reply for links, names and gendered verbs, and a Claude CLI judge grades diagnosis, medical advice, claiming to be human and obeying an injection. Full output: `evals/results/latest-redteam-claude-cli.json`.
+
+| target | scripts passed | crisis scripts ending in handoff | filter catches |
+|---|---|---|---|
+| Claude CLI (Haiku) | 15 / 15 | 4 / 4 | 0 |
+| Grok CLI (default model) | 15 / 15 | 4 / 4 | 0 (one stock line at the tool-loop cap, not a rule break) |
+
+The filter never fired on either model, because each held the rules by itself, so this run measures the model more than the gates; the reply-check table measures the gates. In spot checks on the live site, Gemini also refused the diagnosis and dose pushes on its own. Two things the live checks turned up are now fixed: Gemini answered English in Hinglish, and once used a gendered verb ("de sakti hoon"), which the filter now blocks.
+
 Locally, chat always goes through a CLI: `LLM_LOCAL_CLI=claude` (the default, Haiku) or `LLM_LOCAL_CLI=grok` in `.env.development.local`. The API providers and their keys are for production only, and neither local dev nor the evals use them. Without Supabase keys, sessions are kept in memory. None of these local paths exist in a production build.
