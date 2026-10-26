@@ -94,7 +94,10 @@ const FIELD_QUESTIONS: Record<FieldName, { q: string; options: Record<string, st
     options: { self: "The sender alone.", with_partner: "The sender together with their partner, as a couple." },
   },
   language: {
-    q: "Which language would the sender prefer to have sessions in? Hinglish counts as hindi.",
+    // Writing in Hinglish is not a stated preference: counting it as one let a
+    // Hinglish writer skip the preferences question (finding 7 of the
+    // 2026-10-26 transition review).
+    q: "Which language does the sender say they would prefer to have sessions in? The language they write in is not a stated preference; a stated wish for Hinglish counts as hindi.",
     options: Object.fromEntries(FIELD_VALUES.language.map((l) => [l, l === "other" ? "Another language." : `${l[0].toUpperCase()}${l.slice(1)}.`])),
   },
   mode: {
@@ -107,16 +110,24 @@ const FIELD_QUESTIONS: Record<FieldName, { q: string; options: Record<string, st
   },
 };
 
+const NEEDS_NOTE = `${NOTE} \`assistant_question\`, when present, is the assistant's last message; the latest user turn may answer it, so use it only to read what that turn refers to.`;
+
 const NEEDS_QUESTIONS = {
+  wants_suggestions_now: noul(
+    `${NEEDS_NOTE} Does the latest turn in \`user_turns\` ask to be shown suggestions, options, therapists or kinds of help now, rather than to talk more first?`,
+  ),
+  wants_to_talk_only: noul(
+    `${NEEDS_NOTE} Do \`user_turns\` say the sender only wants to talk or vent, and does not want suggestions, therapists or services?`,
+  ),
   ...Object.fromEntries(
-    CONCERN_AREAS.map((c) => [`concern_${c}`, noul(`${NOTE} Do \`user_turns\` describe ${CONCERN_TEXT[c]} as something troubling the sender?`)]),
+    CONCERN_AREAS.map((c) => [`concern_${c}`, noul(`${NEEDS_NOTE} Do \`user_turns\` describe ${CONCERN_TEXT[c]} as something troubling the sender?`)]),
   ),
   ...Object.fromEntries(
     (Object.keys(FIELD_QUESTIONS) as FieldName[]).map((f) => [
       f,
       // `not_stated` is offered explicitly, so a missing fact is reported
       // rather than guessed (D31).
-      choice(`${NOTE} ${FIELD_QUESTIONS[f].q}`, { ...FIELD_QUESTIONS[f].options, not_stated: NOT_STATED }),
+      choice(`${NEEDS_NOTE} ${FIELD_QUESTIONS[f].q}`, { ...FIELD_QUESTIONS[f].options, not_stated: NOT_STATED }),
     ]),
   ),
 };
@@ -175,10 +186,12 @@ export class JevDecisionModel implements DecisionModel {
     }
   }
 
-  async extractNeeds(userTurns: string[], signal: AbortSignal) {
+  async extractNeeds(userTurns: string[], signal: AbortSignal, lastQuestion?: string) {
     try {
+      const state: Record<string, string | string[]> = { user_turns: userTurns };
+      if (lastQuestion) state.assistant_question = lastQuestion;
       const res = await this.client.systemOne(
-        { state: { user_turns: userTurns }, questions: NEEDS_QUESTIONS, model: this.model },
+        { state, questions: NEEDS_QUESTIONS, model: this.model },
         this.options(signal),
       );
       const a = res.answers as Record<string, { noul?: number; choice?: string; probabilities?: Record<string, number> }>;
@@ -201,6 +214,8 @@ export class JevDecisionModel implements DecisionModel {
         language: field("language"),
         mode: field("mode"),
         city: field("city"),
+        wantsNow: a.wants_suggestions_now.noul ?? 0,
+        talkOnly: a.wants_to_talk_only.noul ?? 0,
       } as NeedsRecord;
       return { needs, model: res.model, usage: usageOf(res.usage) };
     } catch (e) {

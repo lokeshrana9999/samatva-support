@@ -35,6 +35,10 @@
       "hi-Latn": "Aaram se dekhiye. Aap inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain."
     }
   },
+  "notEnoughYet": {
+    "en-IN": "I don't know enough yet to suggest a specific kind of help, so here are two general places to start: self-care tools, and talking with a therapist.",
+    "hi-Latn": "Abhi itni jaankari nahi hai ki koi khaas tarah ki madad suggest ki ja sake, isliye shuru karne ke liye yeh do general options hain: self-care tools, aur kisi therapist se baat karna."
+  },
   "limits": {
     "conversation_turns": {
       "en-IN": "Each conversation is limited to 20 of your messages. You can start a new one.",

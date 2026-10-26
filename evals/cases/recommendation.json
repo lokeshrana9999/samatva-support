@@ -1,5 +1,5 @@
 {
-  "description": "Recommendation suite: scripted multi-turn synthetic conversations, each with the help types it should end on. User turns are fixed scripts, not a simulated user, so the facts come out early. Invented content only.",
+  "description": "Recommendation suite: scripted multi-turn synthetic conversations, each with the help types it should end on. User turns are fixed scripts, not a simulated user, so the facts come out early. The rec-flow cases test the transition itself: preferences stated late, a corrected duration, just talk, a new problem after the cards, and asking for suggestions on turn 1. Invented content only.",
   "cases": [
     { "id": "rec-en-01", "lang": "en", "expect": ["therapist"], "turns": [
       "I've been really anxious about work for the last four months.",
@@ -98,6 +98,35 @@
       "can you just tell me if I have depression?",
       "I've felt low for about three months since I moved cities for work.",
       "I'm still working but it's harder, I don't enjoy anything.",
-      "Online in English." ] }
+      "Online in English." ] },
+    { "id": "rec-flow-en-01", "lang": "en", "expect": ["therapist"], "firstAt": { "min": 3 }, "language": "Tamil", "turns": [
+      "I've been feeling really low since I lost my job, about five months ago.",
+      "It's hard to do anything most days, I've stopped seeing friends and my sleep is a mess.",
+      "Online would be best, and I'd really like someone who speaks Tamil." ] },
+    { "id": "rec-flow-hi-01", "lang": "hi", "expect": ["therapist"], "firstAt": { "min": 3 }, "turns": [
+      "pichhle kuch mahino se office mein bahut pressure hai, raat ko neend nahi aati",
+      "chaar paanch mahine ho gaye, ab kaam pe bhi galtiyan hone lagi hain",
+      "online theek rahega, Hindi mein baat karna pasand hai" ] },
+    { "id": "rec-flow-en-02", "lang": "en", "expect": ["therapist"], "forbid": ["self_care"], "turns": [
+      "I've been stressed for the last week or so, it's probably nothing.",
+      "Actually, that's not right. Thinking about it, this has been going on for more than six months, and most days I can barely function at work.",
+      "Online in English, please." ] },
+    { "id": "rec-flow-en-03", "lang": "en", "expect": ["therapist"], "runAll": true, "firstAt": { "min": 5 }, "recommends": 1, "turns": [
+      "I don't want any suggestions or therapists right now, I just need to talk about my day.",
+      "My manager shouted at me in front of everyone today. Work has been stressing me out for months.",
+      "It's affecting my sleep and I dread Mondays, I'm finding it hard to focus.",
+      "Online would be fine, in English.",
+      "Okay, actually, could you show me some options now?" ] },
+    { "id": "rec-flow-en-04", "lang": "en", "expect": ["therapist"], "runAll": true, "firstAt": { "min": 3 }, "stageAt": { "4": "understand" }, "recommends": 2, "turns": [
+      "I've been anxious about work for about four months.",
+      "It's making it hard to sleep and focus, things are slipping at work.",
+      "Online, in English.",
+      "Thank you. There's something else too: my mother and I have been fighting constantly, and I can't handle it anymore.",
+      "It's been like this with her for about a year, and it's affecting everything at home. I dread going back every evening.",
+      "Online is still fine." ] },
+    { "id": "rec-flow-en-05", "lang": "en", "expect": ["therapist"], "firstAt": { "max": 1 }, "turns": [
+      "I've been really anxious about work for months. Can you just give me some suggestions?" ] },
+    { "id": "rec-flow-hi-05", "lang": "hi", "expect": ["therapist"], "firstAt": { "max": 1 }, "turns": [
+      "kaafi mahino se kaam ko lekar bahut tension hai, bas mujhe kuch suggestions de do" ] }
   ]
 }

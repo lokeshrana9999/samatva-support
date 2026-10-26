@@ -74,9 +74,12 @@ export interface DecisionModel {
     model: string;
     usage: Usage;
   }>;
+  // `lastQuestion` is the assistant's previous message, so a short answer
+  // ("about two months") is read against what it answers.
   extractNeeds(
     userTurns: string[],
     signal: AbortSignal,
+    lastQuestion?: string,
   ): Promise<{ needs: NeedsRecord; model: string; usage: Usage }>;
   checkReply(
     reply: string,

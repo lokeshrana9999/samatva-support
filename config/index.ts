@@ -52,6 +52,7 @@ const ConfigSchema = z.strictObject({
       recommend: ByLang,
       close: ByLang,
     }),
+    notEnoughYet: ByLang,
     limits: z.strictObject({
       conversation_turns: ByLang,
       daily_conversations: ByLang,
@@ -61,6 +62,8 @@ const ConfigSchema = z.strictObject({
   }),
   thresholds: z.strictObject({
     understandMaxTurns: z.number().int().positive(),
+    talkOnlyMaxTurns: z.number().int().positive(),
+    prefTurns: z.number().int().positive(),
     lengthCaps: z.strictObject({
       understand: z.number().int().positive(),
       recommend: z.number().int().positive(),
@@ -76,6 +79,7 @@ const ConfigSchema = z.strictObject({
     }),
     replyCheckP: z.number().min(0).max(1),
     needsP: z.number().min(0).max(1),
+    severeP: z.number().min(0).max(1),
     toolLoopMaxCalls: z.number().int().positive(),
     jevTimeoutMs: z.number().int().positive(),
     jevMaxRetries: z.number().int().min(0),

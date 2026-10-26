@@ -54,8 +54,13 @@ export type FieldName = keyof typeof FIELD_VALUES;
 
 export type Field<V extends string = string> = { value: V | "unknown"; p: number };
 
+// `wantsNow` and `talkOnly` are Jev's Noul probabilities for what the person
+// asked for (wants suggestions now, wants only to talk). Optional because
+// records stored before they existed lack them.
 export type NeedsRecord = {
   concerns: { area: ConcernArea; p: number }[];
+  wantsNow?: number;
+  talkOnly?: number;
 } & { [K in FieldName]: Field<(typeof FIELD_VALUES)[K][number]> };
 
 export const EMPTY_NEEDS: NeedsRecord = {
@@ -69,11 +74,46 @@ export const EMPTY_NEEDS: NeedsRecord = {
   city: { value: "unknown", p: 0 },
 };
 
+export const PREF_FIELDS = ["language", "mode", "city"] as const;
+
+// A field counts only at `p >= minP`; below that it reads as unknown.
+export function known(f: Field, minP: number): boolean {
+  return f.value !== "unknown" && f.p >= minP;
+}
+
 // "Enough" is a rule in code over Jev's probabilities, not a question to Jev
-// (design D24).
-export function enough(n: NeedsRecord, minP: number): boolean {
-  const known = (f: Field) => f.value !== "unknown" && f.p >= minP;
-  return n.concerns.some((c) => c.p >= minP) && known(n.duration) && known(n.impact);
+// (design D24): a concern, a duration and an impact, plus a preference
+// (language or mode) or `prefTurns` understand turns, so cards aren't
+// filtered by preferences nobody was asked for.
+export function enough(n: NeedsRecord, t: { needsP: number; prefTurns: number }, understandTurns: number): boolean {
+  const k = (f: Field) => known(f, t.needsP);
+  const difficulty = n.concerns.some((c) => c.p >= t.needsP) && k(n.duration) && k(n.impact);
+  return difficulty && (k(n.language) || k(n.mode) || understandTurns >= t.prefTurns);
+}
+
+// The difficulty is clear but no preference is known yet: the understand
+// prompt asks for them now.
+export function needsPrefs(n: NeedsRecord, minP: number): boolean {
+  const k = (f: Field) => known(f, minP);
+  return n.concerns.some((c) => c.p >= minP) && k(n.duration) && k(n.impact) && !k(n.language) && !k(n.mode);
+}
+
+// Folds a fresh record from Jev into the stored one. Preferences carry over
+// when the fresh record doesn't state them (understand reads only the turns
+// since it began), and talk-only stays until they ask for suggestions.
+export function mergeNeeds(prev: NeedsRecord | null, next: NeedsRecord, minP: number): NeedsRecord {
+  if (!prev) return next;
+  const out: NeedsRecord = { ...next };
+  for (const f of PREF_FIELDS) if (!known(next[f], minP) && known(prev[f], minP)) out[f] = prev[f] as never;
+  out.talkOnly = (next.wantsNow ?? 0) >= minP ? (next.talkOnly ?? 0) : Math.max(prev.talkOnly ?? 0, next.talkOnly ?? 0);
+  return out;
+}
+
+// Concerns in `next` at `p >= minP` that `prev` doesn't hold. "other" is too
+// vague to count as a new problem.
+export function newConcerns(prev: NeedsRecord | null, next: NeedsRecord, minP: number): NeedsRecord["concerns"] {
+  const had = new Set((prev?.concerns ?? []).map((c) => c.area));
+  return next.concerns.filter((c) => c.p >= minP && c.area !== "other" && !had.has(c.area));
 }
 
 export const HelpRule = z.strictObject({
@@ -90,19 +130,35 @@ export const HelpRule = z.strictObject({
 });
 export type HelpRule = z.infer<typeof HelpRule>;
 
+// The record as the rules see it: fields below `needsP` read as unknown and
+// concerns below it drop out. `impact: severe` needs the higher `severeP`;
+// below that it reads as `some`, since Jev still says daily life is affected.
+function asRulesSee(n: NeedsRecord, t: { needsP: number; severeP: number }) {
+  const v = (f: Field) => (known(f, t.needsP) ? f.value : "unknown");
+  const impact = v(n.impact) === "severe" && n.impact.p < t.severeP ? "some" : v(n.impact);
+  return {
+    concerns: n.concerns.filter((c) => c.p >= t.needsP).map((c) => c.area),
+    duration: v(n.duration),
+    impact,
+    urgency: v(n.urgency),
+    forWhom: v(n.forWhom),
+  };
+}
+
 // Every rule whose `when` matches adds its help types (fields AND, values
 // inside a field OR); the union is capped at 3 with crisis_line first.
-export function helpTypesFor(rules: HelpRule[], n: NeedsRecord, risk: Tier): HelpType[] {
+export function helpTypesFor(rules: HelpRule[], record: NeedsRecord, risk: Tier, t: { needsP: number; severeP: number }): HelpType[] {
+  const n = asRulesSee(record, t);
   const out = new Set<HelpType>();
   for (const r of rules) {
     const w = r.when;
     const ok =
       (!w.risk || w.risk.includes(risk)) &&
-      (!w.concerns || n.concerns.some((c) => w.concerns!.includes(c.area))) &&
-      (!w.duration || w.duration.includes(n.duration.value as never)) &&
-      (!w.impact || w.impact.includes(n.impact.value as never)) &&
-      (!w.urgency || w.urgency.includes(n.urgency.value as never)) &&
-      (!w.forWhom || w.forWhom.includes(n.forWhom.value as never));
+      (!w.concerns || n.concerns.some((c) => w.concerns!.includes(c))) &&
+      (!w.duration || w.duration.includes(n.duration as never)) &&
+      (!w.impact || w.impact.includes(n.impact as never)) &&
+      (!w.urgency || w.urgency.includes(n.urgency as never)) &&
+      (!w.forWhom || w.forWhom.includes(n.forWhom as never));
     if (ok) for (const h of r.add) out.add(h);
   }
   const list = [...out];

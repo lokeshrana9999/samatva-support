@@ -25,7 +25,9 @@ export function languageLine(lang: "en-IN" | "hi-Latn"): string {
   return lang === "hi-Latn" ? "Reply in Hinglish in roman script." : "Reply in English only.";
 }
 
-export function understandPrompt(lengthCap: number): string {
+// `askPrefs`: the controller knows the difficulty but no preference yet, so
+// this reply asks for all three at once.
+export function understandPrompt(lengthCap: number, askPrefs = false): string {
   return `${COMMON}
 - Never name a therapist, doctor or service. Recommendations come later from a catalogue.
 
@@ -34,6 +36,7 @@ Output: a single JSON object and nothing else: {"reply": "<your message>"}
 This stage: understand what is going on.
 - Briefly reflect what they said in their own words, then ask exactly one open question (what or how, never why).
 - Over the conversation, learn: what is troubling them, how long it has lasted, how much it affects daily life, and any preferences (language, online or in person, city).
+- Once the difficulty is clear, ask in one question which language they'd like sessions in, whether online or in person suits them, and which city they're in.${askPrefs ? "\n- The difficulty is clear now: this reply asks that preferences question." : ""}
 - Do not suggest kinds of help yet, and do not give advice, tips or reassurance.
 - Keep "reply" under ${lengthCap} characters.`;
 }

@@ -1,5 +1,7 @@
 {
   "understandMaxTurns": 6,
+  "talkOnlyMaxTurns": 10,
+  "prefTurns": 3,
   "lengthCaps": { "understand": 400, "recommend": 700, "close": 300 },
   "historyWindow": 6,
   "risk": {
@@ -11,6 +13,7 @@
   },
   "replyCheckP": 0.3,
   "needsP": 0.6,
+  "severeP": 0.75,
   "toolLoopMaxCalls": 3,
   "jevTimeoutMs": 1500,
   "jevMaxRetries": 1,

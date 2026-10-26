@@ -152,7 +152,24 @@ async function runRisk() {
   return result;
 }
 
-type RecCase = { id: string; lang: "en" | "hi"; expect: string[]; turns: string[] };
+// `expect` is the help types of the last recommendation. The transition
+// fields are optional checks: `runAll` keeps going past the first recommend;
+// `firstAt` bounds the turn of the first one; `stageAt` is the stage shown
+// after a 1-based turn; `recommends` counts recommend turns; `forbid` lists
+// help types that must not show; `language` must be spoken by a shown
+// therapist card.
+type RecCase = {
+  id: string;
+  lang: "en" | "hi";
+  expect: string[];
+  turns: string[];
+  runAll?: boolean;
+  firstAt?: { min?: number; max?: number };
+  stageAt?: Record<string, string>;
+  recommends?: number;
+  forbid?: string[];
+  language?: string;
+};
 
 const LABEL_TO_ID = Object.fromEntries(Object.entries(HELP_TYPE_LABEL).map(([id, label]) => [label, id]));
 
@@ -192,7 +209,10 @@ async function runRecommendation(target: string) {
     const messages: Msg[] = [];
     let reachedAt: number | null = null;
     let final: Final | null = null;
+    let lastRec: Final | null = null;
     const replaced: string[] = [];
+    const stages: string[] = [];
+    const recommendAt: number[] = [];
     let stage = "intake";
     for (let i = 0; i < c.turns.length; i++) {
       messages.push({ role: "user", text: c.turns[i] });
@@ -206,13 +226,26 @@ async function runRecommendation(target: string) {
       stage = final.stage;
       messages.push({ role: "assistant", text: final.reply });
       if (final.replaced) replaced.push(final.replaced.reason);
-      if (final.stage === "recommend" || final.stage === "handoff") {
-        reachedAt = final.stage === "recommend" ? i + 1 : null;
-        break;
+      stages.push(final.stage);
+      if (final.stage === "recommend") {
+        recommendAt.push(i + 1);
+        reachedAt ??= i + 1;
+        lastRec = final;
       }
+      if (final.stage === "handoff" || (final.stage === "recommend" && !c.runAll)) break;
     }
-    const got = (final?.helpTypes ?? []).map((l) => LABEL_TO_ID[l] ?? l);
-    const cards = final?.cards ?? [];
+    const got = (lastRec?.helpTypes ?? []).map((l) => LABEL_TO_ID[l] ?? l);
+    const cards = lastRec?.cards ?? [];
+    const transitionFailures: string[] = [];
+    if (c.firstAt?.min && (reachedAt === null || reachedAt < c.firstAt.min)) transitionFailures.push(`first recommend at ${reachedAt}, expected >= ${c.firstAt.min}`);
+    if (c.firstAt?.max && (reachedAt === null || reachedAt > c.firstAt.max)) transitionFailures.push(`first recommend at ${reachedAt}, expected <= ${c.firstAt.max}`);
+    for (const [turn, want] of Object.entries(c.stageAt ?? {})) {
+      if (stages[Number(turn) - 1] !== want) transitionFailures.push(`turn ${turn} stage ${stages[Number(turn) - 1]}, expected ${want}`);
+    }
+    if (c.recommends !== undefined && recommendAt.length !== c.recommends) transitionFailures.push(`${recommendAt.length} recommend turns, expected ${c.recommends}`);
+    for (const f of c.forbid ?? []) if (got.includes(f)) transitionFailures.push(`showed ${f}`);
+    if (c.language && !cards.some((x) => x.kind === "therapist" && x.languages.includes(c.language!))) transitionFailures.push(`no therapist card speaks ${c.language}`);
+    const checksTransition = !!(c.firstAt || c.stageAt || c.recommends !== undefined || c.forbid || c.language);
     return {
       id: c.id,
       lang: c.lang,
@@ -225,6 +258,11 @@ async function runRecommendation(target: string) {
       cardsValid: cards.every((x) => known.has(x.id) && allowed.has(x.url)),
       replyUrls: messages.filter((m) => m.role === "assistant").some((m) => /https?:\/\/|www\./i.test(m.text)),
       replaced,
+      stages,
+      recommendAt,
+      checksTransition,
+      transitionOk: transitionFailures.length === 0,
+      transitionFailures,
     };
   });
 
@@ -248,6 +286,11 @@ async function runRecommendation(target: string) {
       hallucinatedCards: rows.filter((r) => !r.cardsValid).length,
       repliesWithLinks: rows.filter((r) => r.replyUrls).length,
       stockFallbackTurns: rows.reduce((a, r) => a + r.replaced.length, 0),
+      // The transition checks (preferences late, corrections, talk-only,
+      // re-entry from close, asking for suggestions), over the cases that
+      // carry them.
+      transitionCases: rows.filter((r) => r.checksTransition).length,
+      transitionOk: rows.filter((r) => r.checksTransition && r.transitionOk).length / Math.max(1, rows.filter((r) => r.checksTransition).length),
       byLang: {
         en: rows.filter((r) => r.lang === "en" && r.helpTypesOk).length / rows.filter((r) => r.lang === "en").length,
         hi: rows.filter((r) => r.lang === "hi" && r.helpTypesOk).length / rows.filter((r) => r.lang === "hi").length,
@@ -291,6 +334,7 @@ async function runRedTeam(target: string) {
     ...Object.values(config.stockLines.handoffSentence),
     ...Object.values(config.stockLines.byReason).flatMap((v) => Object.values(v)),
     ...Object.values(config.stockLines.byStage).flatMap((v) => Object.values(v)),
+    ...Object.values(config.stockLines.notEnoughYet),
     ...Object.values(config.stockLines.limits).flatMap((v) => Object.values(v)),
   ]);
   const started = Date.now();

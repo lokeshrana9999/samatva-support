@@ -249,22 +249,35 @@ Targets: about 3 s per turn in `understand`, about 6 s in `recommend`. One `Abor
 ## the controller
 
 ```
- intake --first msg--> understand --enough, or 6 turns--> recommend
-                         |    ^                              |
-                         '----' each turn: Jev fills         | reply
-                                the needs record             v passes
-                                                           close
+ intake --first msg--> understand --enough, asked, or cap--> recommend
+                         |    ^  ^                              |
+                         '----'  | new concern                  | reply
+              each turn: Jev     | (resets understand turns)    v passes
+              fills the needs    '------------------------- close
+              record
  any stage --tier imminent--> handoff (stays there)
 ```
 
 The stage lives in the `sessions` row and only code moves it. The model never sees a "change stage" option.
+
+Each understand turn, `understandStep` (`src/core/controller/transition.ts`) decides, in this order:
+
+1. A re-entry from close always gets an understand reply first.
+2. They asked for suggestions (`wantsNow >= needsP`) and one concern is at `needsP`: recommend now.
+3. `enough()` holds and they didn't ask only to talk: recommend.
+4. Below the cap: keep understanding. The cap is `understandMaxTurns` (6), or `talkOnlyMaxTurns` (10) when `talkOnly >= needsP`, plus one turn when this turn's needs call failed.
+5. At the cap: recommend if `enough()` holds; otherwise `not_enough`: help types `self_care` and `therapist` only (with `crisis_line` first when risk is `elevated`), no therapist search, no chat call, the `notEnoughYet` stock line and the controller's own service cards. A record with nothing in it gets no invented reasons.
+
+When the record shows the difficulty but no language or mode, the understand prompt gets one extra line telling the model to ask language, online or in person, and city together in this reply.
+
+Close runs the needs call too, on the latest user turn only. A concern at `needsP` that the stored record lacks (not `other`) sends the session back to `understand`: `understandTurns` resets, the record keeps only the new concern and the known preferences, so the old problem's duration and impact can't fill it, and the stepper follows `final.stage` back to Talk. A Jev error in close leaves the session in close.
 
 | stage | model calls | tools | reply length cap | UI |
 |---|---|---|---|---|
 | `intake` | none: fixed text and checkboxes | none | fixed | IntakeCard |
 | `understand` | Jev risk, Jev needs, chat, Jev check | none | 400 chars | stepper: Talk |
 | `recommend` | Jev risk, chat loop, Jev check | `search_therapists`, `search_services` | 700 chars | stepper: Suggestions; chips and cards |
-| `close` | Jev risk, chat, Jev check | none | 300 chars | stepper: Wrap up; ClosePanel |
+| `close` | Jev risk, Jev needs (latest turn), chat, Jev check | none | 300 chars | stepper: Wrap up; ClosePanel |
 | `handoff` | none: fixed text from config | none | fixed | HandoffPanel |
 
 `handoff` runs no model at all. Its text and crisis lines come from config in English and Hinglish, picked by `lang`. A crisis path with zero network calls can't fail on a provider outage.
@@ -273,7 +286,9 @@ The stage lives in the `sessions` row and only code moves it. The model never se
 
 ### the needs record
 
-Jev fills it from all user turns so far (at most 6 in `understand`) and the controller replaces the stored record each turn. Every field is an enum plus a probability, so the record stores no free text and needs no content rules of its own.
+Jev fills it from the user turns since understand began (at most 6), plus the assistant's last message as `assistant_question`, so "about two months" is read against the question it answers. The controller folds the fresh record into the stored one: every field comes from the fresh record, except that a language, mode or city Jev doesn't state again carries over, and talk-only stays until they ask for suggestions. Every field is an enum plus a probability, so the record stores no free text and needs no content rules of its own.
+
+Two Nouls ride along as numbers: `wantsNow` (the latest turn asks to see suggestions now) and `talkOnly` (they want only to talk, not suggestions). Both are optional on the type, since records stored before them lack them. The language question counts only a stated preference: writing in Hinglish isn't one, so a Hinglish writer still gets asked.
 
 ```ts
 const ConcernArea = z.enum([
@@ -294,19 +309,21 @@ export const NeedsRecord = z.object({
   impact:   Field(z.enum(['little', 'some', 'severe'])), // daily life
   urgency:  Field(z.enum(['can_wait', 'soon', 'now'])),
   forWhom:  Field(z.enum(['self', 'with_partner'])),
-  prefs: z.object({
-    language: Field(Language),     // session language, eg 'hindi'
-    mode:     Field(z.enum(['online', 'in_person', 'either'])),
-    city:     Field(City),         // catalogue cities + 'other'
-  }),
+  language: Field(Language),       // stated session language, eg 'hindi'
+  mode:     Field(z.enum(['online', 'in_person', 'either'])),
+  city:     Field(City),           // catalogue cities + 'other'
+  wantsNow: z.number().optional(), // Noul: show suggestions now
+  talkOnly: z.number().optional(), // Noul: only wants to talk
 });
 ```
 
-"Enough" is a rule in code over Jev's probabilities, not a question to Jev: at least one concern with `p >= 0.6`, and `duration` and `impact` known with `p >= 0.6` (thresholds in `config/thresholds.json`). The spec's "Jev says the record is enough" is met by Jev's calibrated fields; the controller decides what to do with them.
+"Enough" is a rule in code over Jev's probabilities, not a question to Jev: at least one concern with `p >= needsP` (0.6), `duration` and `impact` known at `needsP`, and a preference (language or mode at `needsP`) or `prefTurns` (3) understand turns. Without the last part every scripted case recommended on turn 2, before anyone asked a preference that the cards are then filtered by. Thresholds live in `config/thresholds.json`. The spec's "Jev says the record is enough" is met by Jev's calibrated fields; the controller decides what to do with them.
 
 ### the rules table
 
 `config/help-rules.json` maps the needs record and risk tier to help types. Every rule whose `when` matches adds its help types (fields AND, values inside a field OR); the union is capped at 3, with `crisis_line` first when present. The values below are examples for the shape, not clinical advice; the real table needs clinician review (spec, Loom close).
+
+The rules read the record at Jev's confidence: a field below `needsP` reads as unknown and a concern below it drops out, so a 0.55 sleep concern no longer adds a psychiatrist. `impact: severe` needs `severeP` (0.75) for `severe-long` and `severe-now`; between `needsP` and `severeP` it reads as `some`, since Jev still says daily life is affected. The recommend prompt's summary of the record and the controller's default search use the same `needsP` cut.
 
 ```json
 [
@@ -315,8 +332,12 @@ export const NeedsRecord = z.object({
   { "id": "severe-long",
     "when": { "impact": ["severe"], "duration": ["over_3_months"] },
     "add": ["psychiatrist", "therapist"] },
+  { "id": "severe-now",
+    "when": { "impact": ["severe"], "urgency": ["now"] },
+    "add": ["psychiatrist"] },
   { "id": "sleep-substance",
-    "when": { "concerns": ["sleep", "substance_use"] },
+    "when": { "concerns": ["sleep", "substance_use"],
+              "impact": ["some", "severe"] },
     "add": ["psychiatrist"] },
   { "id": "couples", "when": { "forWhom": ["with_partner"] },
     "add": ["couples_therapist"] },

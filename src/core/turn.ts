@@ -22,12 +22,18 @@ import type { FloorResult } from "./gates/keyword-floor";
 import { filterReply } from "./gates/output-filter";
 import { assessRisk, type RiskResult } from "./gates/risk";
 import { closePrompt, languageLine, languageRules, recommendPrompt, regeneratePrompt, understandPrompt } from "./controller/prompts";
+import { understandStep } from "./controller/transition";
 import {
   ConcernArea,
   EMPTY_NEEDS,
   HELP_TYPE_LABEL,
-  enough,
   helpTypesFor,
+  known,
+  mergeNeeds,
+  needsPrefs,
+  newConcerns,
+  PREF_FIELDS,
+  type Field,
   type HelpType,
   type NeedsRecord,
 } from "./needs";
@@ -92,16 +98,19 @@ function toolSchemas(therapistTypes: TherapistType[], serviceTypes: HelpType[]) 
   };
 }
 
-function needsSummary(n: NeedsRecord): string {
+// Only what Jev holds at `needsP` or above, so the model doesn't explain a
+// match with a guess.
+function needsSummary(n: NeedsRecord, minP: number): string {
+  const v = (f: Field) => (known(f, minP) ? f.value : "unknown");
   const parts = [
-    `concerns: ${n.concerns.map((c) => c.area).join(", ") || "unknown"}`,
-    `duration: ${n.duration.value}`,
-    `impact on daily life: ${n.impact.value}`,
-    `urgency: ${n.urgency.value}`,
-    `for: ${n.forWhom.value}`,
-    `language: ${n.language.value}`,
-    `mode: ${n.mode.value}`,
-    `city: ${n.city.value}`,
+    `concerns: ${n.concerns.filter((c) => c.p >= minP).map((c) => c.area).join(", ") || "unknown"}`,
+    `duration: ${v(n.duration)}`,
+    `impact on daily life: ${v(n.impact)}`,
+    `urgency: ${v(n.urgency)}`,
+    `for: ${v(n.forWhom)}`,
+    `language: ${v(n.language)}`,
+    `mode: ${v(n.mode)}`,
+    `city: ${v(n.city)}`,
   ];
   return parts.join("; ");
 }
@@ -217,8 +226,14 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   }
 
   // Risk and needs run in parallel; the chat model waits for both (D13).
+  // Understand reads the user turns since it began (a re-entry from close
+  // starts over); close reads only the latest one, to spot a new problem.
+  // Jev also gets the assistant's last message, which that turn may answer.
   const userTurns = input.messages.filter((m) => m.role === "user").map((m) => m.text);
-  const gathering = s.stage === "intake" || s.stage === "understand";
+  const inClose = s.stage === "close" || s.stage === "recommend";
+  const window = inClose ? 1 : Math.min(s.understandTurns + 1, t.understandMaxTurns);
+  const prior = input.messages.at(-2);
+  const lastQuestion = prior?.role === "assistant" ? prior.text : undefined;
   const [riskResult, needsResult] = await Promise.all([
     assessRisk({
       decision: deps.decision,
@@ -228,9 +243,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
       thresholds: t.risk,
       signal: deps.signal,
     }),
-    gathering
-      ? deps.decision.extractNeeds(userTurns.slice(-t.understandMaxTurns), deps.signal).catch(() => null)
-      : Promise.resolve(null),
+    deps.decision.extractNeeds(userTurns.slice(-window), deps.signal, lastQuestion).catch(() => null),
   ]);
   risk = riskResult;
   addUsage(risk.usage);
@@ -239,10 +252,15 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   if (risk.beingHarmed) s.beingHarmed = true;
   if (tier === "imminent") return handoff();
   if (tier === "elevated") s.riskFloor = "elevated";
+  // A concern the stored record lacks, raised after the cards, sends the
+  // session back to understand (applied below, once no limit stops the turn).
+  let fresh: NeedsRecord["concerns"] = [];
   if (needsResult) {
-    s.needs = needsResult.needs;
     addUsage(needsResult.usage);
+    if (inClose) fresh = newConcerns(s.needs, needsResult.needs, t.needsP);
+    else s.needs = mergeNeeds(s.needs, needsResult.needs, t.needsP);
   }
+  const reentered = fresh.length > 0;
 
   // Caps come after both crisis checks (the keyword floor and Jev's risk read)
   // and before any chat call, so a limit never hides the handoff (spec 9a).
@@ -255,11 +273,21 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
 
   s.userTurns += 1;
   if (s.stage === "intake") s.stage = "understand";
+  // Re-entry keeps only the new concern and the known preferences, so the
+  // old problem's duration and impact can't fill the new record.
+  if (reentered) {
+    const prefs = Object.fromEntries(PREF_FIELDS.map((f) => [f, (s.needs ?? EMPTY_NEEDS)[f]]));
+    s.needs = { ...EMPTY_NEEDS, ...prefs, concerns: fresh };
+    s.stage = "understand";
+    s.understandTurns = 0;
+  }
   let stage: ReplyStage = s.stage === "close" || s.stage === "recommend" ? "close" : "understand";
+  let notEnough = false;
   if (stage === "understand") {
     s.understandTurns += 1;
-    const needs = s.needs ?? EMPTY_NEEDS;
-    if (enough(needs, t.needsP) || s.understandTurns >= t.understandMaxTurns) stage = "recommend";
+    const step = understandStep(s.needs, s.understandTurns, { reentered, needsFailed: needsResult === null }, t);
+    if (step !== "understand") stage = "recommend";
+    notEnough = step === "not_enough";
   }
   s.stage = stage;
 
@@ -312,19 +340,23 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   };
 
   // Recommend-only state: what the rules picked and what the tools returned.
+  // At the cap without enough to go on: general help only, no therapist
+  // search, and the crisis line still first when risk is elevated.
   const needs = s.needs ?? EMPTY_NEEDS;
-  const helpTypes = stage === "recommend" ? helpTypesFor(config.helpRules, needs, tier) : [];
-  const therapistTypes = helpTypes.filter((h): h is TherapistType => (THERAPIST_TYPES as readonly string[]).includes(h));
+  const general: HelpType[] = tier === "elevated" ? ["crisis_line", "self_care", "therapist"] : ["self_care", "therapist"];
+  const helpTypes = stage !== "recommend" ? [] : notEnough ? general : helpTypesFor(config.helpRules, needs, tier, t);
+  const therapistTypes = notEnough ? [] : helpTypes.filter((h): h is TherapistType => (THERAPIST_TYPES as readonly string[]).includes(h));
   const serviceTypes = helpTypes.filter((h) => h !== "crisis_line");
   const results = new Map<string, Card>();
 
   // The controller's own pick, used when the model searches for nothing or
   // shows ids it never got back.
   const defaultCards = async (): Promise<Card[]> => {
-    const concerns = needs.concerns.map((c) => c.area);
-    const mode = needs.mode.value === "online" || needs.mode.value === "in_person" ? needs.mode.value : undefined;
-    const language = needs.language.value === "unknown" ? undefined : needs.language.value;
-    const city = needs.city.value === "unknown" ? undefined : needs.city.value;
+    const k = (f: Field) => known(f, t.needsP);
+    const concerns = needs.concerns.filter((c) => c.p >= t.needsP).map((c) => c.area);
+    const mode = k(needs.mode) && (needs.mode.value === "online" || needs.mode.value === "in_person") ? needs.mode.value : undefined;
+    const language = k(needs.language) ? needs.language.value : undefined;
+    const city = k(needs.city) ? needs.city.value : undefined;
     const th: Card[] = [];
     for (const h of therapistTypes) {
       th.push(...(await deps.catalogue.searchTherapists({ helpType: h, concerns, language, mode, city, limit: therapistTypes.length > 1 ? 2 : 3 })));
@@ -378,11 +410,11 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
 
   const stagePrompt =
     stage === "understand"
-      ? understandPrompt(cap)
+      ? understandPrompt(cap, needsPrefs(needs, t.needsP))
       : stage === "recommend"
         ? recommendPrompt({
             lengthCap: cap,
-            needs: needsSummary(needs),
+            needs: needsSummary(needs, t.needsP),
             helpTypes: helpTypes.map((h) => h),
             therapistTypes,
           })
@@ -409,6 +441,10 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
       outcome,
     );
   };
+
+  // Fixed text and the controller's own cards: no chat call, so no reasons
+  // invented for a record that doesn't hold any.
+  if (notEnough) return done(strings.notEnoughYet[lang], await defaultCards().catch(() => []), null, "ok");
 
   try {
     const first = await produce(base);

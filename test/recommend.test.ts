@@ -79,18 +79,18 @@ const msgs = (text: string): Msg[] => [{ role: "user", text }];
 
 describe("rules and the needs gate", () => {
   it("needs a concern, a duration and an impact before recommending", () => {
-    expect(enough(needs(), 0.6)).toBe(true);
-    expect(enough(needs({ impact: { value: "unknown", p: 0.7 } }), 0.6)).toBe(false);
-    expect(enough(needs({ concerns: [{ area: "sleep", p: 0.4 }] }), 0.6)).toBe(false);
+    expect(enough(needs(), config.thresholds, 3)).toBe(true);
+    expect(enough(needs({ impact: { value: "unknown", p: 0.7 } }), config.thresholds, 2)).toBe(false);
+    expect(enough(needs({ concerns: [{ area: "sleep", p: 0.4 }] }), config.thresholds, 2)).toBe(false);
   });
 
   it("maps needs and risk to help types, crisis line first", () => {
-    expect(helpTypesFor(config.helpRules, needs(), "none")).toEqual(["therapist"]);
-    expect(helpTypesFor(config.helpRules, needs({ impact: { value: "severe", p: 0.9 } }), "none")).toEqual(["psychiatrist", "therapist"]);
-    expect(helpTypesFor(config.helpRules, needs(), "elevated")[0]).toBe("crisis_line");
-    expect(helpTypesFor(config.helpRules, needs({ forWhom: { value: "with_partner", p: 0.9 } }), "none")).toContain("couples_therapist");
+    expect(helpTypesFor(config.helpRules, needs(), "none", config.thresholds)).toEqual(["therapist"]);
+    expect(helpTypesFor(config.helpRules, needs({ impact: { value: "severe", p: 0.9 } }), "none", config.thresholds)).toEqual(["psychiatrist", "therapist"]);
+    expect(helpTypesFor(config.helpRules, needs(), "elevated", config.thresholds)[0]).toBe("crisis_line");
+    expect(helpTypesFor(config.helpRules, needs({ forWhom: { value: "with_partner", p: 0.9 } }), "none", config.thresholds)).toContain("couples_therapist");
     expect(
-      helpTypesFor(config.helpRules, needs({ impact: { value: "little", p: 0.9 }, duration: { value: "under_2_weeks", p: 0.9 } }), "none"),
+      helpTypesFor(config.helpRules, needs({ impact: { value: "little", p: 0.9 }, duration: { value: "under_2_weeks", p: 0.9 } }), "none", config.thresholds),
     ).toContain("self_care");
   });
 });
@@ -171,7 +171,7 @@ describe("recommend stage", () => {
 
   it("answers briefly in close without new cards", async () => {
     const chat = scripted([{ reply: "Of course. The suggestions above are there whenever you want them." }]);
-    const { final } = await runTurn(deps(chat, gate(needs())), { session: session({ stage: "close" }), messages: msgs("thanks") });
+    const { final } = await runTurn(deps(chat, gate(needs())), { session: session({ stage: "close", needs: needs() }), messages: msgs("thanks") });
     expect(final.stage).toBe("close");
     expect(final.cards).toEqual([]);
   });
