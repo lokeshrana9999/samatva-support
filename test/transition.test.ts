@@ -45,6 +45,15 @@ describe("rules respect Jev's confidence", () => {
     expect(rules(needs({ concerns: [{ area: "sleep", p: 0.9 }], impact: { value: "severe", p: 0.7 } }))).toContain("psychiatrist");
   });
 
+  it("reads impact split between some and severe as some", () => {
+    const split = needs({ impact: { value: "severe", p: 0.58 }, impactAffected: 0.95 });
+    expect(enough(split, t, t.prefTurns)).toBe(true);
+    expect(rules(split)).toEqual(["therapist"]);
+    expect(rules({ ...split, concerns: [{ area: "sleep", p: 0.9 }] })).toContain("psychiatrist");
+    expect(enough(needs({ impact: { value: "severe", p: 0.58 }, impactAffected: 0.5 }), t, t.prefTurns)).toBe(false);
+    expect(enough(needs({ impact: { value: "little", p: 0.5 }, impactAffected: 0.9 }), t, t.prefTurns)).toBe(false);
+  });
+
   it("keeps the crisis line first when risk is elevated", () => {
     expect(rules(needs(), "elevated")[0]).toBe("crisis_line");
   });

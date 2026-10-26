@@ -55,12 +55,14 @@ export type FieldName = keyof typeof FIELD_VALUES;
 export type Field<V extends string = string> = { value: V | "unknown"; p: number };
 
 // `wantsNow` and `talkOnly` are Jev's Noul probabilities for what the person
-// asked for (wants suggestions now, wants only to talk). Optional because
-// records stored before they existed lack them.
+// asked for (wants suggestions now, wants only to talk); `impactAffected` is
+// Jev's p(some) + p(severe) for impact. Optional because records stored
+// before they existed lack them.
 export type NeedsRecord = {
   concerns: { area: ConcernArea; p: number }[];
   wantsNow?: number;
   talkOnly?: number;
+  impactAffected?: number;
 } & { [K in FieldName]: Field<(typeof FIELD_VALUES)[K][number]> };
 
 export const EMPTY_NEEDS: NeedsRecord = {
@@ -81,13 +83,22 @@ export function known(f: Field, minP: number): boolean {
   return f.value !== "unknown" && f.p >= minP;
 }
 
+// Impact is ordinal, and Jev can split "affected" between some and severe so
+// that neither reaches `minP` alone. Then it reads as `some` when the pair
+// does.
+export function impactValue(n: NeedsRecord, minP: number): Field["value"] {
+  if (known(n.impact, minP)) return n.impact.value;
+  const affected = n.impact.value === "some" || n.impact.value === "severe";
+  return affected && (n.impactAffected ?? 0) >= minP ? "some" : "unknown";
+}
+
 // "Enough" is a rule in code over Jev's probabilities, not a question to Jev
 // (design D24): a concern, a duration and an impact, plus a preference
 // (language or mode) or `prefTurns` understand turns, so cards aren't
 // filtered by preferences nobody was asked for.
 export function enough(n: NeedsRecord, t: { needsP: number; prefTurns: number }, understandTurns: number): boolean {
   const k = (f: Field) => known(f, t.needsP);
-  const difficulty = n.concerns.some((c) => c.p >= t.needsP) && k(n.duration) && k(n.impact);
+  const difficulty = n.concerns.some((c) => c.p >= t.needsP) && k(n.duration) && impactValue(n, t.needsP) !== "unknown";
   return difficulty && (k(n.language) || k(n.mode) || understandTurns >= t.prefTurns);
 }
 
@@ -95,7 +106,7 @@ export function enough(n: NeedsRecord, t: { needsP: number; prefTurns: number },
 // prompt asks for them now.
 export function needsPrefs(n: NeedsRecord, minP: number): boolean {
   const k = (f: Field) => known(f, minP);
-  return n.concerns.some((c) => c.p >= minP) && k(n.duration) && k(n.impact) && !k(n.language) && !k(n.mode);
+  return n.concerns.some((c) => c.p >= minP) && k(n.duration) && impactValue(n, minP) !== "unknown" && !k(n.language) && !k(n.mode);
 }
 
 // Folds a fresh record from Jev into the stored one. Preferences carry over
@@ -135,7 +146,8 @@ export type HelpRule = z.infer<typeof HelpRule>;
 // below that it reads as `some`, since Jev still says daily life is affected.
 function asRulesSee(n: NeedsRecord, t: { needsP: number; severeP: number }) {
   const v = (f: Field) => (known(f, t.needsP) ? f.value : "unknown");
-  const impact = v(n.impact) === "severe" && n.impact.p < t.severeP ? "some" : v(n.impact);
+  const read = impactValue(n, t.needsP);
+  const impact = read === "severe" && n.impact.p < t.severeP ? "some" : read;
   return {
     concerns: n.concerns.filter((c) => c.p >= t.needsP).map((c) => c.area),
     duration: v(n.duration),

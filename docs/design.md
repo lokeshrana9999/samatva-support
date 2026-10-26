@@ -314,6 +314,7 @@ export const NeedsRecord = z.object({
   city:     Field(City),           // catalogue cities + 'other'
   wantsNow: z.number().optional(), // Noul: show suggestions now
   talkOnly: z.number().optional(), // Noul: only wants to talk
+  impactAffected: z.number().optional(), // p(some) + p(severe)
 });
 ```
 
@@ -323,7 +324,7 @@ export const NeedsRecord = z.object({
 
 `config/help-rules.json` maps the needs record and risk tier to help types. Every rule whose `when` matches adds its help types (fields AND, values inside a field OR); the union is capped at 3, with `crisis_line` first when present. The values below are examples for the shape, not clinical advice; the real table needs clinician review (spec, Loom close).
 
-The rules read the record at Jev's confidence: a field below `needsP` reads as unknown and a concern below it drops out, so a 0.55 sleep concern no longer adds a psychiatrist. `impact: severe` needs `severeP` (0.75) for `severe-long` and `severe-now`; between `needsP` and `severeP` it reads as `some`, since Jev still says daily life is affected. The recommend prompt's summary of the record and the controller's default search use the same `needsP` cut.
+The rules read the record at Jev's confidence: a field below `needsP` reads as unknown and a concern below it drops out, so a 0.55 sleep concern no longer adds a psychiatrist. `impact: severe` needs `severeP` (0.75) for `severe-long` and `severe-now`; between `needsP` and `severeP` it reads as `some`, since Jev still says daily life is affected. Impact is ordinal, so when Jev splits it between `some` and `severe` and neither reaches `needsP`, it reads as `some` if the pair does (`impactAffected`, the adapter's p(some) + p(severe)); `enough()` uses the same reading. The recommend prompt's summary of the record and the controller's default search use the same `needsP` cut.
 
 ```json
 [

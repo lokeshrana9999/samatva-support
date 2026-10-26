@@ -216,6 +216,7 @@ export class JevDecisionModel implements DecisionModel {
         city: field("city"),
         wantsNow: a.wants_suggestions_now.noul ?? 0,
         talkOnly: a.wants_to_talk_only.noul ?? 0,
+        impactAffected: (a.impact.probabilities?.some ?? 0) + (a.impact.probabilities?.severe ?? 0),
       } as NeedsRecord;
       return { needs, model: res.model, usage: usageOf(res.usage) };
     } catch (e) {
