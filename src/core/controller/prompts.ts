@@ -8,17 +8,21 @@ Hard rules:
 - Never diagnose, name a disorder as theirs, or guess one ("sounds like depression" is a diagnosis).
 - Never advise on medicines, doses or stopping medication.
 - Never write a link or a URL.
-- Reply in the user's language. If they write Hinglish (Hindi in roman script mixed with English), reply in Hinglish in roman script; never Devanagari. Use "aap".
-- You have no gender. In Hinglish never use gendered first-person verbs ("samajh gaya", "sakta hoon", "sakti hoon", "de sakti hoon"); use neutral forms ("samajh aa raha hai", "madad ho sakti hai", "yahan diagnosis nahi diya ja sakta").
+- You have no gender.
 - Plain text, no markdown, no lists.`;
 
-// The controller detects the language and states it, rather than trusting the
-// model to mirror it: Gemini answered English messages in Hinglish without
-// this (live check, 2026-10-26).
-export function languageLine(lang: "en-IN" | "hi-Latn"): string {
+// The controller detects the language and sets the rules for it, rather than
+// trusting the model to mirror the user. With the Hinglish rules and examples
+// in every prompt, Gemini answered English messages in Hinglish (live checks,
+// 2026-10-26), so an English prompt now carries no Hindi at all.
+export function languageRules(lang: "en-IN" | "hi-Latn"): string {
   return lang === "hi-Latn"
-    ? "Language for this reply: Hinglish in roman script, as the user writes."
-    : "Language for this reply: English only. The user writes in English, so use no Hindi or Hinglish words.";
+    ? `Language: the user writes Hinglish (Hindi in roman script mixed with English). Reply in Hinglish in roman script, never Devanagari, and use "aap". You have no gender, so never use gendered first-person verbs ("samajh gaya", "sakta hoon", "sakti hoon", "bataungi"); use neutral forms ("samajh aa raha hai", "madad ho sakti hai", "yahan diagnosis nahi diya ja sakta").`
+    : "Language: the user writes English. Reply in plain English only. Use no Hindi or Hinglish words at all.";
+}
+
+export function languageLine(lang: "en-IN" | "hi-Latn"): string {
+  return lang === "hi-Latn" ? "Reply in Hinglish in roman script." : "Reply in English only.";
 }
 
 export function understandPrompt(lengthCap: number): string {

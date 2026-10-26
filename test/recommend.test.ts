@@ -184,6 +184,7 @@ describe("language", () => {
     await runTurn(deps(chat, gate({ ...EMPTY_NEEDS })), { session: session(), messages: msgs("My partner and I keep fighting") });
     await runTurn(deps(chat, gate({ ...EMPTY_NEEDS })), { session: session(), messages: msgs("mujhe bahut stress ho raha hai") });
     expect(seen[0]).toContain("English only");
-    expect(seen[1]).toContain("Hinglish in roman script, as the user writes");
+    expect(seen[0]).not.toMatch(/hoon|aap|Hinglish in roman/);
+    expect(seen[1]).toContain("Reply in Hinglish in roman script");
   });
 });
