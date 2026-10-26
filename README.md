@@ -1,22 +1,46 @@
 # samatva-support
 
-A support assistant that listens first, then helps someone work out what kind of help they need. Its restraint lives in a controller outside the model, following [samatva](https://github.com/lokeshrana9999/samatva)'s design.
+A support assistant that listens first, works out what kind of help might fit, and points to linked Amaha services and sample therapist profiles. A controller in code owns the conversation stages and the safety gates; the language model writes the wording inside them and calls catalogue search tools only where the controller allows. The restraint design comes from [samatva](https://github.com/lokeshrana9999/samatva).
 
-Status: step 1 of the build (deployed skeleton). See `docs/spec.md` for the decisions and step plan, and `docs/design.md` for the system and frontend design.
+Built by Lokesh as the build submission for Amaha's AI Engineer role (option 1: "a conversational agent that helps someone figure out what kind of help they might need"). It is an independent demo, not affiliated with Amaha. Therapist profiles are invented samples, and Amaha's service pages are linked, never copied.
 
-## run locally
+- Live: https://samatva-support.vercel.app (sign in with any email and the access key Lokesh shares)
+- Evals and "About this demo", public: https://samatva-support.vercel.app/evals
+- Decisions: `docs/spec.md`. System and frontend design: `docs/design.md`.
 
-Needs Node 22+. Secrets live in `.env` and `.env.local`, both gitignored.
+## architecture
 
-```sh
-npm install
-npm run dev        # http://localhost:3000
-npm test           # unit tests (vitest)
-npm run typecheck
-npm run lint       # includes the core's import-boundary rule
+```
+ browser: / (chat)  /login  /evals
+    |  POST /api/turn -> SSE status events, then one final event
+    v
+ +------------------------- core (no I/O) --------------------------+
+ | keyword floor -> Jev risk -> limits -> controller -> output      |
+ | (local, no      (tiers,      (never    (stage FSM,   filter      |
+ |  network)        fail         on a      typed tool   (code +     |
+ |                  closed)      handoff)  loop)        Jev)        |
+ +------|-------------|-------------|-------------|-----------------+
+        |  ports: DecisionModel ChatModel Catalogue SessionStore
+        |         AuditLog TranscriptStore RateLimiter
+        v             v             v             v
+       Jev      chat chain     repo JSON     Supabase, Mumbai
+  jev-1.14.0    Google AI      catalogue     (sessions, audit,
+                Studio >                      limits, consented
+                OpenRouter                    transcripts)
+                (local: Claude
+                 or Grok CLI)
 ```
 
-`npm run eval -- --suite risk` runs the risk suite against real Jev (needs `TYPESAFE_API_KEY` in `.env.local`). `npm run eval -- --suite recommendation --target claude-cli` (or `grok-cli`) runs the recommendation suite through the full turn pipeline on a local CLI. The eval script loads `.env.local` only, never `.env`.
+Stages are `intake`, `understand`, `recommend`, `close`, and `handoff`, which any stage can enter. The model never picks the stage. Each provider, Jev and Supabase is an adapter behind a port, and lint stops `src/core/**` from importing any of them. Next.js 16 on Vercel (`bom1`), TypeScript throughout.
+
+## safety design
+
+- Keyword floor: English and Hinglish patterns, each with its own tier and an exclusion list for hard negatives ("this deadline is killing me"). Runs first, needs no network, and still fires when Jev says `none`.
+- Jev risk tiers: on every user turn, Jev answers typed questions (tier `none`, `elevated` or `imminent`, plus self-harm, harm to others, being harmed). Thresholds on its probabilities live in config; the stricter of floor and Jev wins. `imminent` goes to the handoff: fixed text and crisis lines (112 first), no model call, nothing about booking. `elevated` locks a crisis line into the recommendation for the rest of the conversation.
+- Fail closed: if a Jev call errors or times out, the risk gate treats the turn as `elevated` and the output filter blocks the reply.
+- Output filter on every reply: code checks (link allowlist, every name matches this turn's tool results, length cap, Hinglish gendered first-person verbs) plus Jev yes/no checks (diagnosis, medicine or dose advice, claims to be human). On a failure it regenerates once with the violation named, then shows a fixed stock line with a note.
+- Caps never block the handoff: 20 turns a conversation, 5 conversations a day and 30 turns an hour per IP and per reviewer, and a $5 daily spend cap are checked after both crisis checks. A turn in handoff is never capped, and the crisis lines stay on screen when a limit hits.
+- Data: message text is stored only with opt-in consent and purged after 30 days; the audit log holds gate results and token counts, no text. Emails and IPs are kept only as keyed hashes.
 
 ## eval results
 
@@ -65,4 +89,34 @@ Red team, 2026-10-26: 15 multi-turn pressure scripts (diagnosis, dose, "are you 
 
 The filter never fired on either model, because each held the rules by itself, so this run measures the model more than the gates; the reply-check table measures the gates. In spot checks on the live site, Gemini also refused the diagnosis and dose pushes on its own. Two things the live checks turned up are now fixed: Gemini answered English in Hinglish, and once used a gendered verb ("de sakti hoon"), which the filter now blocks.
 
-Locally, chat always goes through a CLI: `LLM_LOCAL_CLI=claude` (the default, Haiku) or `LLM_LOCAL_CLI=grok` in `.env.development.local`. The API providers and their keys are for production only, and neither local dev nor the evals use them. Without Supabase keys, sessions are kept in memory. None of these local paths exist in a production build.
+## run locally
+
+Needs Node 22+, the Claude CLI (and the Grok CLI for the second eval target), and a TypeSafe key for Jev. Locally, chat always goes through a CLI and nothing else: the API providers are never built outside production, and their keys are for the deployed app only. Without Supabase keys, sessions, audit, limits and transcripts are kept in memory.
+
+1. Put `TYPESAFE_API_KEY` in `.env.local`, and `LLM_LOCAL_CLI=claude` (the default, Haiku) or `grok` plus the reviewer secrets (`DEMO_ACCESS_KEY`, `AUTH_COOKIE_SECRET`, `EMAIL_HASH_SECRET`, `HISTORY_MAC_SECRET`) in `.env.development.local`. Both files are gitignored.
+2. Install and check:
+
+```sh
+npm install
+npm run typecheck
+npm run lint       # includes the core's import-boundary rule
+npm test           # unit tests (vitest)
+npm run dev        # http://localhost:3000
+```
+
+3. Run an eval suite. The script loads `.env.local` only, never `.env`, and writes `evals/results/latest-*.json`, which `/evals` reads at build time.
+
+```sh
+npm run eval -- --suite risk
+npm run eval -- --suite recommendation --target claude-cli   # or grok-cli
+```
+
+## limitations
+
+- Every eval case is synthetic and written by the builder; the suites are smoke tests, not benchmarks. No clinician has reviewed the rules table or the thresholds.
+- The deployed chat chain (Gemini, then OpenRouter) is checked only by spot turns on the live site, never by a local eval run. Alibaba is out of the chain until its key works.
+- The red team never saw the filter fire, because both models refused on their own; the gate is measured by the reply-check suite instead.
+- English and Hinglish in roman script only; no Devanagari or other Indian languages, and crisis lines are India only.
+- Jev's reversed option order (design D32) hasn't been run, and latency on real traffic is measured only by spot checks.
+- The spend counter prices Google's free tier at OpenRouter's list price, so the $5 cap hits early.
+- Booking, accounts and memory across conversations are out of scope; Amaha's real directory would plug in behind the `Catalogue` port.
