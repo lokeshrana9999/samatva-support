@@ -178,7 +178,12 @@ Each step ends deployed, with the evals that exist so far passing.
    - Red-team suite, 15 scripts: 15 of 15 pass on both the Claude CLI and the Grok CLI, and all 4 crisis scripts end in handoff on both. The filter never fired, because both models held the rules themselves.
    - Language: an English prompt now carries no Hindi at all, and the language rules are picked by the detected language. Before that, Gemini answered English in Hinglish twice on the live site.
    - The Loom's diagnosis flow won't show a filter catch on its own, because Gemini and Haiku both refuse. The reply-check suite and the "Under the hood" trace are the honest way to show the gate.
-5. Limits and spend cap; transcripts with consent, delete, 30-day purge.
+5. Limits and spend cap; transcripts with consent, delete, 30-day purge. Done and deployed 2026-10-26:
+   - Caps: 5 conversations a day and 30 turns an hour (each per IP hash and per reviewer), $5 a day in total, 10 login attempts per 15 minutes per IP (429 with `Retry-After`). They're checked after both crisis checks and before any chat call; tests cover the keyword handoff, a Jev-only handoff and turns already in handoff.
+   - Spend: `config/prices.json` prices calls whose provider reports no cost (Google), using OpenRouter's list price, so on Google's free tier the counter overestimates and the cap hits early.
+   - Live checks: a consented conversation wrote 4 transcript rows expiring in 30 days; delete removed them and the session, and the content-free audit rows stayed; a conversation without consent wrote none. Limit buckets filled as expected. The limit function returns 401 without the server key. The login cap answered 429 on the 10th try in the window.
+   - Purge jobs: scheduled by the migration, which succeeded. I haven't seen one run yet; the first `purge-sessions` run is due within the hour.
+   - Local dev keeps sessions, audit, limits and transcripts in memory; it no longer writes to the production database.
 6. Google AI Studio and Alibaba adapters with failover; Grok CLI as an eval target; `/evals` page; README.
 7. Loom outline rehearsal, record, flip the repo public.
 
