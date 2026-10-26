@@ -1064,6 +1064,7 @@ Reviewed adversarially on 2026-10-26 against the spec's rules and the code (find
 | other, in understand | Before suggesting anything, it helps to understand a bit more. What's been weighing on you most? | Kuch suggest karne se pehle thoda aur samajhna madadgaar hoga. Aapko sabse zyada kya pareshan kar raha hai? |
 | other, in recommend | Based on what you've shared, these kinds of help may fit. | Aapne jo bataya uske hisaab se, is tarah ki madad aapke liye sahi ho sakti hai. |
 | other, in close | Take your time with these. You can open any of them, or delete this conversation below. | Aaram se dekhiye. Aap inme se koi bhi khol sakte hain, ya neeche yeh conversation delete kar sakte hain. |
+| not enough yet (`notEnoughYet`, understand cap reached without `enough()`) | I don't know enough yet to suggest a specific kind of help, so here are two general places to start: self-care tools, and talking with a therapist. | Abhi itni jaankari nahi hai ki koi khaas tarah ki madad suggest ki ja sake, isliye shuru karne ke liye yeh do general options hain: self-care tools, aur kisi therapist se baat karna. |
 
 Replaced-reply notes (English chrome), by `replaced.reason`. The live region announces the note after the reply, so screen reader users hear that a reply was held back:
 

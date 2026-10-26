@@ -32,6 +32,8 @@ type RecRow = {
   cardsValid: boolean;
   replyUrls: boolean;
   replaced: string[];
+  // Absent in runs from before the transition checks existed.
+  transitionFailures?: string[];
 };
 type RecResult = RunMeta & {
   metrics: {
@@ -43,6 +45,8 @@ type RecResult = RunMeta & {
     repliesWithLinks: number;
     stockFallbackTurns: number;
     unexpectedCrisisLine: number;
+    transitionCases?: number;
+    transitionOk?: number;
   };
   rows: RecRow[];
 };
@@ -187,6 +191,7 @@ function recMisses(r: RecResult): Miss[] {
       !row.cardsValid && "a card outside the catalogue",
       row.replyUrls && "a link in the reply",
       row.replaced.length > 0 && `stock line (${row.replaced.join(", ")})`,
+      ...(row.transitionFailures ?? []),
     ].filter(Boolean);
     if (!problems.length) return [];
     return [{ id: row.id, target, input: inputOf(row.id), expected: helpList(row.expect), got: `${helpList(row.got)}; ${problems.join("; ")}` }];
@@ -205,6 +210,15 @@ function recommendationSuite(): Suite {
     rows: [
       { metric: "reached the recommend step", target: "100%", cells: runs.map((r) => atLeast(r.metrics.reachedRecommend, 1, r.cases)) },
       { metric: "expected kinds of help present", target: "100%", cells: runs.map((r) => atLeast(r.metrics.helpTypeMatch, 1, r.cases)) },
+      {
+        metric: "transition checks passed",
+        target: "100%",
+        cells: runs.map((r) =>
+          r.metrics.transitionCases === undefined || r.metrics.transitionOk === undefined
+            ? plain("not run")
+            : atLeast(r.metrics.transitionOk, 1, r.metrics.transitionCases),
+        ),
+      },
       {
         metric: "exact match, ignoring the default therapist",
         target: "reported",
