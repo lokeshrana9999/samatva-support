@@ -7,6 +7,8 @@ import stockLinesJson from "./stock-lines.json";
 import thresholdsJson from "./thresholds.json";
 import limitsJson from "./limits.json";
 import providersJson from "./providers.json";
+import helpRulesJson from "./help-rules.json";
+import { HelpRule } from "../src/core/needs";
 
 const Lang = z.enum(["en-IN", "hi-Latn"]);
 const ByLang = z.record(Lang, z.string().min(1));
@@ -72,6 +74,8 @@ const ConfigSchema = z.strictObject({
       beingHarmedNoulP: z.number().min(0).max(1),
     }),
     replyCheckP: z.number().min(0).max(1),
+    needsP: z.number().min(0).max(1),
+    toolLoopMaxCalls: z.number().int().positive(),
     jevTimeoutMs: z.number().int().positive(),
     jevMaxRetries: z.number().int().min(0),
     jevDeadlineMs: z.number().int().positive(),
@@ -98,6 +102,7 @@ const ConfigSchema = z.strictObject({
     }),
     jev: z.strictObject({ model: z.string() }),
   }),
+  helpRules: z.array(HelpRule).min(1),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -110,4 +115,5 @@ export const config: Config = ConfigSchema.parse({
   thresholds: thresholdsJson,
   limits: limitsJson,
   providers: providersJson,
+  helpRules: helpRulesJson,
 });

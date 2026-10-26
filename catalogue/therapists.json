@@ -1,0 +1,89 @@
+{
+  "note": "Synthetic sample profiles: invented people, not Amaha clinicians. Every card shows 'Sample profile, not a real clinician'. Each links to Amaha's real booking page for that kind of help, never to a profile. Amaha's real directory would replace this file behind the Catalogue port.",
+  "therapists": [
+    {
+      "id": "t-01", "name": "Ira Menon", "title": "Counselling Psychologist",
+      "languages": ["english", "malayalam", "hindi"], "specialties": ["Work stress", "Anxiety", "Sleep"],
+      "modes": ["online", "in_person"], "cities": ["bengaluru"],
+      "helpTypes": ["therapist"], "concernAreas": ["stress_anxiety", "work_study", "sleep"]
+    },
+    {
+      "id": "t-02", "name": "Kabir Sethi", "title": "Clinical Psychologist",
+      "languages": ["english", "hindi", "punjabi"], "specialties": ["Low mood", "Grief", "Life transitions"],
+      "modes": ["online", "in_person"], "cities": ["new_delhi", "gurugram"],
+      "helpTypes": ["therapist"], "concernAreas": ["low_mood", "grief_loss", "other"]
+    },
+    {
+      "id": "t-03", "name": "Ananya Rao", "title": "Counselling Psychologist",
+      "languages": ["english", "kannada", "telugu"], "specialties": ["Relationships", "Family conflict", "Self-esteem"],
+      "modes": ["online"], "cities": [],
+      "helpTypes": ["therapist"], "concernAreas": ["relationships", "family", "identity_sexuality"]
+    },
+    {
+      "id": "t-04", "name": "Rohan Kulkarni", "title": "Clinical Psychologist",
+      "languages": ["english", "marathi", "hindi"], "specialties": ["Trauma", "Anxiety", "Panic"],
+      "modes": ["online", "in_person"], "cities": ["mumbai"],
+      "helpTypes": ["therapist"], "concernAreas": ["trauma", "stress_anxiety"]
+    },
+    {
+      "id": "t-05", "name": "Meher Bose", "title": "Counselling Psychologist",
+      "languages": ["english", "bengali", "hindi"], "specialties": ["Students and exams", "Anxiety", "Low mood"],
+      "modes": ["online"], "cities": [],
+      "helpTypes": ["therapist"], "concernAreas": ["work_study", "stress_anxiety", "low_mood"]
+    },
+    {
+      "id": "t-06", "name": "Arjun Iyer", "title": "Clinical Psychologist",
+      "languages": ["english", "tamil"], "specialties": ["Anger", "Relationships", "Work stress"],
+      "modes": ["online", "in_person"], "cities": ["bengaluru"],
+      "helpTypes": ["therapist"], "concernAreas": ["anger", "relationships", "work_study"]
+    },
+    {
+      "id": "t-07", "name": "Sana Qureshi", "title": "Counselling Psychologist",
+      "languages": ["english", "hindi"], "specialties": ["Eating and body image", "Self-esteem", "Anxiety"],
+      "modes": ["online"], "cities": [],
+      "helpTypes": ["therapist"], "concernAreas": ["eating_body", "stress_anxiety", "identity_sexuality"]
+    },
+    {
+      "id": "t-08", "name": "Devika Shah", "title": "Clinical Psychologist",
+      "languages": ["english", "gujarati", "hindi"], "specialties": ["Substance use", "Family conflict", "Low mood"],
+      "modes": ["online", "in_person"], "cities": ["mumbai"],
+      "helpTypes": ["therapist"], "concernAreas": ["substance_use", "family", "low_mood"]
+    },
+    {
+      "id": "t-09", "name": "Neel Chatterjee", "title": "Couples Therapist",
+      "languages": ["english", "bengali", "hindi"], "specialties": ["Couples conflict", "Communication", "Trust"],
+      "modes": ["online", "in_person"], "cities": ["new_delhi"],
+      "helpTypes": ["couples_therapist"], "concernAreas": ["relationships", "family"]
+    },
+    {
+      "id": "t-10", "name": "Priya Nair", "title": "Couples Therapist",
+      "languages": ["english", "malayalam", "tamil"], "specialties": ["Couples conflict", "Pre-marital counselling", "Parenting together"],
+      "modes": ["online"], "cities": [],
+      "helpTypes": ["couples_therapist"], "concernAreas": ["relationships", "family"]
+    },
+    {
+      "id": "t-11", "name": "Dr. Vikram Joshi", "title": "Psychiatrist",
+      "languages": ["english", "hindi", "marathi"], "specialties": ["Depression", "Anxiety disorders", "Sleep problems"],
+      "modes": ["online", "in_person"], "cities": ["mumbai"],
+      "helpTypes": ["psychiatrist"], "concernAreas": ["low_mood", "stress_anxiety", "sleep"]
+    },
+    {
+      "id": "t-12", "name": "Dr. Lata Krishnan", "title": "Psychiatrist",
+      "languages": ["english", "tamil", "telugu"], "specialties": ["Mood disorders", "Substance use", "Sleep problems"],
+      "modes": ["online", "in_person"], "cities": ["bengaluru"],
+      "helpTypes": ["psychiatrist"], "concernAreas": ["low_mood", "substance_use", "sleep"]
+    },
+    {
+      "id": "t-13", "name": "Dr. Farhan Ali", "title": "Psychiatrist",
+      "languages": ["english", "hindi", "punjabi"], "specialties": ["Anxiety disorders", "Trauma", "ADHD in adults"],
+      "modes": ["online", "in_person"], "cities": ["new_delhi", "gurugram"],
+      "helpTypes": ["psychiatrist"], "concernAreas": ["stress_anxiety", "trauma", "work_study"]
+    },
+    {
+      "id": "t-14", "name": "Dr. Kavya Reddy", "title": "Psychiatrist",
+      "languages": ["english", "telugu", "kannada", "hindi"], "specialties": ["Depression", "Grief", "Eating disorders"],
+      "modes": ["online"], "cities": [],
+      "helpTypes": ["psychiatrist"], "concernAreas": ["low_mood", "grief_loss", "eating_body"]
+    }
+  ]
+}

@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "eval": "tsx --env-file-if-exists=.env.local evals/runner.ts"
+    "eval": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local evals/runner.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",

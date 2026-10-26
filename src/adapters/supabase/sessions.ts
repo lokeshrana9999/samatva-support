@@ -2,6 +2,7 @@
 // two concurrent turns on one conversation can't both write.
 import { randomUUID } from "node:crypto";
 import type { SessionStore } from "@/core/ports";
+import type { NeedsRecord } from "@/core/needs";
 import type { SessionState } from "@/core/types";
 import { supabase } from "./client";
 
@@ -14,11 +15,12 @@ type Row = {
   being_harmed: boolean;
   transcript_consent: boolean;
   history_mac: string | null;
+  needs: NeedsRecord | Record<string, never>;
   version: number;
 };
 
 const COLUMNS =
-  "id, stage, risk_floor, user_turns, understand_turns, being_harmed, transcript_consent, history_mac, version";
+  "id, stage, risk_floor, user_turns, understand_turns, being_harmed, transcript_consent, history_mac, needs, version";
 
 function fromRow(r: Row): SessionState {
   return {
@@ -30,6 +32,8 @@ function fromRow(r: Row): SessionState {
     beingHarmed: r.being_harmed,
     transcriptConsent: r.transcript_consent,
     historyMac: r.history_mac,
+    // The column defaults to {}; an empty object means no record yet.
+    needs: r.needs && "concerns" in r.needs ? (r.needs as NeedsRecord) : null,
     version: r.version,
   };
 }
@@ -61,6 +65,7 @@ export class SupabaseSessionStore implements SessionStore {
         understand_turns: s.understandTurns,
         being_harmed: s.beingHarmed,
         history_mac: s.historyMac,
+        needs: s.needs ?? {},
         version: s.version + 1,
         last_seen_at: new Date().toISOString(),
       })

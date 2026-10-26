@@ -5,7 +5,8 @@
 // (design D50).
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CrisisLine, Final, Lang, Phase, ReplacedReason } from "@/core/types";
+import type { Card, CrisisLine, Final, Lang, Phase, ReplacedReason } from "@/core/types";
+import { HelpTypeChips, RecommendationCards } from "./cards";
 import { codePoints } from "@/core/text";
 import { CrisisLineList, CrisisStrip, SourcesCaption } from "./crisis";
 import { DemoFooter, Header } from "./shell";
@@ -23,6 +24,8 @@ type ChatMessage = {
   failed?: boolean;
   replaced?: ReplacedReason | null;
   trace?: Final["trace"];
+  cards?: Card[];
+  helpTypes?: string[];
 };
 
 type Conv = { started: boolean; consent: boolean; messages: ChatMessage[]; last: Final | null };
@@ -214,7 +217,14 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
       last: f,
       messages: [
         ...c.messages,
-        { role: "assistant", text: f.reply, lang: f.lang, replaced: f.replaced?.reason ?? null, trace: f.trace },
+        {
+          role: "assistant",
+          text: f.reply,
+          lang: f.lang,
+          replaced: f.replaced?.reason ?? null,
+          trace: f.trace,
+          ...(f.cards.length ? { cards: f.cards, helpTypes: f.helpTypes } : {}),
+        },
       ],
     }));
     setAnnounce(`Assistant: ${f.reply}`);
@@ -379,10 +389,37 @@ export function ChatApp({ defaultLines }: { defaultLines: CrisisLine[] }) {
                       </p>
                     )}
                     {traceOn && m.trace && <TraceRow trace={m.trace} />}
+                    {/* Cards come out of the DOM in a handoff, not just hidden (D49). */}
+                    {m.cards && !inHandoff && (
+                      <div className="mt-4 flex flex-col gap-4">
+                        <HelpTypeChips labels={m.helpTypes ?? []} />
+                        {m.helpTypes?.includes("A crisis line, now") && (
+                          <div className="rounded-lg border border-urgent-border bg-urgent-bg p-3 text-urgent-ink">
+                            <p className="text-[14px] font-medium">Talk to a person now:</p>
+                            <CrisisLineList lines={lines} variant="compact" />
+                          </div>
+                        )}
+                        <RecommendationCards cards={m.cards} />
+                      </div>
+                    )}
                   </div>
                 ),
               )}
             </div>
+
+            {(stage === "close" || stage === "recommend") && !limit && !phase && (
+              <section className="rounded-xl border border-line bg-surface p-4">
+                <p>That&apos;s what I can suggest for now. You can open any of these, ask a short question, or delete this conversation.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="min-h-11 rounded-lg border border-danger px-4 font-medium text-danger" onClick={() => setConfirmDelete(true)}>
+                    Delete my conversation
+                  </button>
+                  <button className="min-h-11 rounded-lg border border-input-border px-4" onClick={() => reset()}>
+                    Start over
+                  </button>
+                </div>
+              </section>
+            )}
 
             {phase && (
               <p className="text-[14px] text-muted" aria-live="polite">

@@ -8,6 +8,7 @@ import {
   choice,
   noul,
 } from "@typesafe-ai/sdk";
+import { CONCERN_AREAS, FIELD_VALUES, type ConcernArea, type FieldName, type NeedsRecord } from "@/core/needs";
 import { DecisionError, type DecisionModel, type Usage } from "@/core/ports";
 
 // $0.042 per million input tokens, output free (docs.typesafe.ai/models).
@@ -41,12 +42,76 @@ const RISK_QUESTIONS = {
 
 const REPLY_QUESTIONS = {
   diagnosis: noul(
-    "Does `reply` diagnose the user or say they have, or probably have, a specific mental health condition or disorder (for example depression, anxiety disorder, ADHD, bipolar)? Reflecting the user's own worry back as theirs ('you're worried it might be depression') is not a diagnosis.",
+    "Does `reply` diagnose the user or say they have, or probably have, a specific mental health condition or disorder (for example depression, generalised anxiety disorder, ADHD, bipolar)? Not a diagnosis: reflecting the user's own worry back as theirs ('you're worried it might be depression'), or mentioning the difficulty they described in everyday words ('the anxiety about work you mentioned').",
   ),
   medical_advice: noul(
-    "Does `reply` advise about medicines, doses, starting or stopping medication, or other medical treatment?",
+    "Does `reply` tell the user to take, avoid, start, change or stop a specific medicine, or advise on a dose? Not medical advice: suggesting a kind of help (a therapist, a psychiatrist, self-care tools), or saying a psychiatrist can assess them or discuss treatment.",
   ),
   claims_human: noul("Does `reply` say or imply that the assistant is a human being, or that it has feelings?"),
+};
+
+// One Noul per concern: a Choice picks exactly one option and a person can
+// have two concerns (D31).
+const CONCERN_TEXT: Record<ConcernArea, string> = {
+  stress_anxiety: "stress, worry, nervousness, anxiety or panic",
+  low_mood: "low mood, sadness, emptiness, hopelessness or lost interest",
+  relationships: "trouble with a partner, a romantic relationship or a breakup",
+  family: "conflict or strain with parents, siblings, children or in-laws",
+  work_study: "pressure or problems at work, at college or with exams",
+  sleep: "sleeping badly, insomnia or sleeping too much",
+  grief_loss: "the death of someone, or another loss they are grieving",
+  trauma: "a frightening, violent or abusive event that still affects them",
+  substance_use: "alcohol, drugs or another substance they are using too much",
+  eating_body: "eating, weight or how they feel about their body",
+  identity_sexuality: "their identity, gender, sexuality or sense of self-worth",
+  anger: "anger, irritability or losing their temper",
+  other: "some other emotional difficulty not covered by common categories",
+};
+
+const NOT_STATED = "The messages don't say.";
+const FIELD_QUESTIONS: Record<FieldName, { q: string; options: Record<string, string> }> = {
+  duration: {
+    q: "How long has the main difficulty in `user_turns` been going on?",
+    options: { under_2_weeks: "Less than two weeks.", "2_weeks_to_3_months": "Between two weeks and three months.", over_3_months: "More than three months." },
+  },
+  impact: {
+    q: "How much does the difficulty in `user_turns` affect the sender's daily life (work, sleep, eating, relationships)?",
+    options: { little: "Barely; daily life goes on as usual.", some: "Noticeably; some things are harder or slipping.", severe: "A lot; they can hardly function day to day." },
+  },
+  urgency: {
+    q: "How soon does the sender want or need help?",
+    options: { can_wait: "No hurry.", soon: "Within the next week or two.", now: "Right away." },
+  },
+  forWhom: {
+    q: "Who is the help for?",
+    options: { self: "The sender alone.", with_partner: "The sender together with their partner, as a couple." },
+  },
+  language: {
+    q: "Which language would the sender prefer to have sessions in? Hinglish counts as hindi.",
+    options: Object.fromEntries(FIELD_VALUES.language.map((l) => [l, l === "other" ? "Another language." : `${l[0].toUpperCase()}${l.slice(1)}.`])),
+  },
+  mode: {
+    q: "Does the sender prefer online sessions or meeting in person?",
+    options: { online: "Online.", in_person: "In person.", either: "Either is fine." },
+  },
+  city: {
+    q: "Which city does the sender live in or want in-person sessions in?",
+    options: { bengaluru: "Bengaluru (Bangalore).", mumbai: "Mumbai.", new_delhi: "Delhi or New Delhi.", gurugram: "Gurugram (Gurgaon).", other: "Another city." },
+  },
+};
+
+const NEEDS_QUESTIONS = {
+  ...Object.fromEntries(
+    CONCERN_AREAS.map((c) => [`concern_${c}`, noul(`${NOTE} Do \`user_turns\` describe ${CONCERN_TEXT[c]} as something troubling the sender?`)]),
+  ),
+  ...Object.fromEntries(
+    (Object.keys(FIELD_QUESTIONS) as FieldName[]).map((f) => [
+      f,
+      // `not_stated` is offered explicitly, so a missing fact is reported
+      // rather than guessed (D31).
+      choice(`${NOTE} ${FIELD_QUESTIONS[f].q}`, { ...FIELD_QUESTIONS[f].options, not_stated: NOT_STATED }),
+    ]),
+  ),
 };
 
 function usageOf(u: { input_tokens: number | null; output_tokens: number | null }): Usage {
@@ -98,6 +163,39 @@ export class JevDecisionModel implements DecisionModel {
         model: res.model,
         usage: usageOf(res.usage),
       };
+    } catch (e) {
+      throw wrap(e);
+    }
+  }
+
+  async extractNeeds(userTurns: string[], signal: AbortSignal) {
+    try {
+      const res = await this.client.systemOne(
+        { state: { user_turns: userTurns }, questions: NEEDS_QUESTIONS, model: this.model },
+        this.options(signal),
+      );
+      const a = res.answers as Record<string, { noul?: number; choice?: string; probabilities?: Record<string, number> }>;
+      const concerns = CONCERN_AREAS.map((area) => ({ area, p: a[`concern_${area}`].noul ?? 0 }))
+        .filter((c) => c.p >= 0.5)
+        .sort((x, y) => y.p - x.p)
+        .slice(0, 2);
+      const field = (f: FieldName) => {
+        const ans = a[f];
+        const value = ans.choice ?? "not_stated";
+        const p = ans.probabilities?.[value] ?? 0;
+        return value === "not_stated" ? { value: "unknown" as const, p } : { value, p };
+      };
+      const needs = {
+        concerns,
+        duration: field("duration"),
+        impact: field("impact"),
+        urgency: field("urgency"),
+        forWhom: field("forWhom"),
+        language: field("language"),
+        mode: field("mode"),
+        city: field("city"),
+      } as NeedsRecord;
+      return { needs, model: res.model, usage: usageOf(res.usage) };
     } catch (e) {
       throw wrap(e);
     }

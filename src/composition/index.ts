@@ -3,8 +3,9 @@
 import "server-only";
 import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
-import { DecisionError, type AuditLog, type ChatModel, type DecisionModel, type SessionStore } from "@/core/ports";
+import { DecisionError, type AuditLog, type Catalogue, type ChatModel, type DecisionModel, type SessionStore } from "@/core/ports";
 import { JevDecisionModel } from "@/adapters/decision/jev";
+import { JsonCatalogue } from "@/adapters/catalogue/json";
 import { MemoryAuditLog } from "@/adapters/memory/audit";
 import { SupabaseAuditLog } from "@/adapters/supabase/audit";
 import { ProviderChain } from "@/adapters/chat/chain";
@@ -16,6 +17,7 @@ import { SupabaseSessionStore } from "@/adapters/supabase/sessions";
 export type Deps = {
   chat: ChatModel;
   decision: DecisionModel;
+  catalogue: Catalogue;
   sessions: SessionStore;
   audit: AuditLog;
   keywordFloor: ReturnType<typeof compileFloor>;
@@ -63,7 +65,7 @@ async function build(): Promise<Deps> {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in production");
   }
 
-  return { chat, decision: decisionModel(), sessions, audit, keywordFloor, turnDeadlineMs };
+  return { chat, decision: decisionModel(), catalogue: new JsonCatalogue(), sessions, audit, keywordFloor, turnDeadlineMs };
 }
 
 // Jev in every environment, no stand-in model (D20). Without a key every call
@@ -75,7 +77,7 @@ function decisionModel(): DecisionModel {
     const fail = async (): Promise<never> => {
       throw new DecisionError("TYPESAFE_API_KEY is not set");
     };
-    return { assessRisk: fail, checkReply: fail };
+    return { assessRisk: fail, extractNeeds: fail, checkReply: fail };
   }
   return new JevDecisionModel(config.providers.jev.model, {
     timeoutMs: t.jevTimeoutMs,

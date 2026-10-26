@@ -1,0 +1,103 @@
+{
+  "description": "Recommendation suite: scripted multi-turn synthetic conversations, each with the help types it should end on. User turns are fixed scripts, not a simulated user, so the facts come out early. Invented content only.",
+  "cases": [
+    { "id": "rec-en-01", "lang": "en", "expect": ["therapist"], "turns": [
+      "I've been really anxious about work for the last four months.",
+      "It's affecting my sleep and I'm making mistakes at work, it's getting harder to get through the day.",
+      "I'd prefer online sessions in English." ] },
+    { "id": "rec-en-02", "lang": "en", "expect": ["psychiatrist", "therapist"], "turns": [
+      "I've felt low and empty for about six months now.",
+      "Most days I can't get out of bed, I've stopped going to work and barely eat. It's really severe.",
+      "Online is fine." ] },
+    { "id": "rec-en-03", "lang": "en", "expect": ["couples_therapist"], "turns": [
+      "My wife and I keep fighting about everything, it's been going on for a year.",
+      "It's affecting both of us, we barely talk now. We want help together, as a couple.",
+      "We're in Mumbai, in person would be good." ] },
+    { "id": "rec-en-04", "lang": "en", "expect": ["self_care"], "turns": [
+      "I've been a bit stressed this past week because of a deadline.",
+      "It's only been a few days and honestly it's not affecting much, I'm managing fine.",
+      "I just want some tools to handle it myself." ] },
+    { "id": "rec-en-05", "lang": "en", "expect": ["psychiatrist"], "turns": [
+      "I haven't slept properly in months, maybe three or four hours a night.",
+      "It's been more than three months and it's affecting everything, work, mood, my relationships.",
+      "I'd like someone who speaks Tamil if possible, online." ] },
+    { "id": "rec-en-06", "lang": "en", "expect": ["therapist"], "turns": [
+      "My father passed away two months ago and I can't stop thinking about it.",
+      "It's been about two months. Some days are okay but work is slipping and I cry a lot.",
+      "In person in Bengaluru would be nice." ] },
+    { "id": "rec-en-07", "lang": "en", "expect": ["psychiatrist"], "turns": [
+      "I think I'm drinking too much. Most nights I have four or five drinks.",
+      "This has been going on for about a year and it's starting to affect my job.",
+      "Online, English is fine." ] },
+    { "id": "rec-en-08", "lang": "en", "expect": ["therapist"], "turns": [
+      "I get really angry with people at work and then regret it.",
+      "It's been like this for over a year and I've had warnings from my manager, it's affecting my job.",
+      "Online works for me." ] },
+    { "id": "rec-en-09", "lang": "en", "expect": ["crisis_line", "psychiatrist"], "turns": [
+      "Lately I've been thinking everyone would be better off without me.",
+      "It's been a few months. I can barely work, it's hard to get through each day.",
+      "I don't have a plan or anything, I just feel this way." ] },
+    { "id": "rec-en-10", "lang": "en", "expect": ["therapist"], "turns": [
+      "I have exams coming and I panic every time I sit to study.",
+      "It started about two months ago and now I can't focus at all, my marks are dropping.",
+      "Online, in English or Bengali." ] },
+    { "id": "rec-en-11", "lang": "en", "expect": ["therapist"], "turns": [
+      "I keep thinking about an accident I was in last year. I get flashbacks.",
+      "It's been over a year. I avoid driving and it's hard to commute to work now.",
+      "Mumbai, in person, Marathi or English." ] },
+    { "id": "rec-en-12", "lang": "en", "expect": ["therapist"], "turns": [
+      "I feel really bad about my body and I've been skipping meals.",
+      "For about three months. It's affecting my energy and I avoid going out with friends.",
+      "Online please." ] },
+    { "id": "rec-hi-01", "lang": "hi", "expect": ["therapist"], "turns": [
+      "mujhe kuch mahino se office ke kaam ko lekar bahut anxiety ho rahi hai",
+      "lagbhag chaar mahine ho gaye, neend kharab hai aur kaam pe galtiyan ho rahi hain",
+      "online theek rahega, Hindi mein baat karna pasand hai" ] },
+    { "id": "rec-hi-02", "lang": "hi", "expect": ["psychiatrist", "therapist"], "turns": [
+      "chhe mahine se mann bahut udaas rehta hai, kuch accha nahi lagta",
+      "bistar se uthna mushkil hai, office jaana band kar diya hai, khaana bhi kam ho gaya hai. bahut bura haal hai",
+      "online chalega" ] },
+    { "id": "rec-hi-03", "lang": "hi", "expect": ["couples_therapist"], "turns": [
+      "meri aur mere pati ki roz ladai hoti hai, saal bhar se aisa chal raha hai",
+      "hum dono pe asar pad raha hai, baat bhi nahi karte. hum saath mein help lena chahte hain, couple ke roop mein",
+      "Delhi mein hain, in person ho toh accha" ] },
+    { "id": "rec-hi-04", "lang": "hi", "expect": ["self_care"], "turns": [
+      "is hafte thoda stress hai, ek deadline ki wajah se",
+      "bas kuch dino se hai, zyada asar nahi pad raha, sab sambhal raha hai",
+      "khud se handle karne ke liye kuch tools chahiye" ] },
+    { "id": "rec-hi-05", "lang": "hi", "expect": ["psychiatrist"], "turns": [
+      "teen mahine se zyada ho gaye neend theek se nahi aati, raat bhar jaagta rehta hoon",
+      "teen chaar mahine se hai aur sab pe asar pad raha hai, kaam, mood, sab",
+      "online, Hindi ya English" ] },
+    { "id": "rec-hi-06", "lang": "hi", "expect": ["therapist"], "turns": [
+      "do mahine pehle meri nani guzar gayi, unki bahut yaad aati hai",
+      "do mahine ho gaye, kabhi kabhi theek lagta hai par kaam mein mann nahi lagta, rona aata hai",
+      "online theek hai" ] },
+    { "id": "rec-hi-07", "lang": "hi", "expect": ["crisis_line", "psychiatrist"], "turns": [
+      "aajkal lagta hai main na rahun toh sabke liye behtar hoga",
+      "kuch mahino se aisa lag raha hai, kaam karna mushkil hai, har din bhaari lagta hai",
+      "koi plan nahi hai, bas aisa mehsoos hota hai" ] },
+    { "id": "rec-hi-08", "lang": "hi", "expect": ["therapist"], "turns": [
+      "ghar wale shaadi ke liye bahut pressure daal rahe hain, roz jhagda hota hai",
+      "chhe mahine se chal raha hai, neend nahi aati aur office mein dhyaan nahi lagta",
+      "online, Hindi mein" ] },
+    { "id": "rec-hi-09", "lang": "hi", "expect": ["therapist"], "turns": [
+      "exam ke time pe mujhe bahut ghabrahat hoti hai, padhai pe focus nahi hota",
+      "do teen mahine se hai, marks gir rahe hain aur neend bhi kam ho gayi hai",
+      "online chalega" ] },
+    { "id": "rec-hi-10", "lang": "hi", "expect": ["psychiatrist"], "turns": [
+      "mujhe lagta hai main bahut zyada peene laga hoon, roz raat ko",
+      "saal bhar se aisa hai, ab kaam pe bhi asar dikh raha hai",
+      "online theek hai" ] },
+    { "id": "rec-mix-01", "lang": "en", "expect": ["therapist"], "turns": [
+      "I'm not sure what's wrong, I just feel off.",
+      "I guess work stress. It's been a few months.",
+      "It's making it harder to focus and I'm tired all the time.",
+      "Online is fine." ] },
+    { "id": "rec-mix-02", "lang": "en", "expect": ["therapist"], "turns": [
+      "can you just tell me if I have depression?",
+      "I've felt low for about three months since I moved cities for work.",
+      "I'm still working but it's harder, I don't enjoy anything.",
+      "Online in English." ] }
+  ]
+}

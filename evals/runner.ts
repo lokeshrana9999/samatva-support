@@ -8,9 +8,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { config } from "@config";
 import { JevDecisionModel } from "@/adapters/decision/jev";
+import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
+import { ProviderChain } from "@/adapters/chat/chain";
+import { OpenAICompatibleProvider } from "@/adapters/chat/openai-compatible";
+import { MemorySessionStore } from "@/adapters/memory/sessions";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { assessRisk } from "@/core/gates/risk";
-import type { Tier } from "@/core/types";
+import { HELP_TYPE_LABEL } from "@/core/needs";
+import type { ChatModel } from "@/core/ports";
+import { runTurn } from "@/core/turn";
+import type { Final, Msg, Tier } from "@/core/types";
 
 type RiskCase = { id: string; lang: "en" | "hi"; label: Tier; text: string; beingHarmed?: boolean };
 
@@ -139,11 +146,141 @@ async function runRisk() {
   return result;
 }
 
+type RecCase = { id: string; lang: "en" | "hi"; expect: string[]; turns: string[] };
+
+const LABEL_TO_ID = Object.fromEntries(Object.entries(HELP_TYPE_LABEL).map(([id, label]) => [label, id]));
+
+// Google AI Studio's free tier allows 15 requests a minute per model, so the
+// chain target spaces its calls out instead of tripping the quota and
+// measuring fallbacks.
+class Throttled implements ChatModel {
+  private next = 0;
+  constructor(
+    private readonly inner: ChatModel,
+    private readonly gapMs: number,
+  ) {}
+  async complete(req: Parameters<ChatModel["complete"]>[0]) {
+    const wait = Math.max(0, this.next - Date.now());
+    this.next = Math.max(Date.now(), this.next) + this.gapMs;
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    return this.inner.complete(req);
+  }
+}
+
+async function chatTarget(target: string): Promise<ChatModel> {
+  if (target === "claude-cli") {
+    const { ClaudeCliProvider } = await import("@/adapters/chat/cli/claude");
+    return new ProviderChain([{ provider: new ClaudeCliProvider("haiku"), timeoutMs: 90_000 }]);
+  }
+  const keyEnv = { openrouter: "OPEN_ROUTER", google: "GOOGLE_STUDIO", alibaba: "ALIBABA_KEY" } as const;
+  const providers = config.providers.chat
+    .filter((p) => process.env[keyEnv[p.id]])
+    .map((p) => ({ provider: new OpenAICompatibleProvider(p.id, p.model, process.env[keyEnv[p.id]]!), timeoutMs: p.timeoutMs }));
+  if (!providers.length) throw new Error("no chat provider key in the environment");
+  return new Throttled(new ProviderChain(providers), 5_000);
+}
+
+async function runRecommendation(target: string) {
+  if (!process.env.TYPESAFE_API_KEY) throw new Error("TYPESAFE_API_KEY must be set for the recommendation suite");
+  const { cases } = JSON.parse(readFileSync(path.join(ROOT, "evals/cases/recommendation.json"), "utf8")) as { cases: RecCase[] };
+  const chat = await chatTarget(target);
+  const decision = new JevDecisionModel(config.providers.jev.model, { timeoutMs: 5000, maxRetries: 2, deadlineMs: 20000 });
+  const catalogue = new JsonCatalogue();
+  const allowed = catalogue.allowedUrls();
+  const known = new Set([...therapists.map((x) => x.id), ...services.map((x) => x.id)]);
+  const keywordFloor = compileFloor(config.riskKeywords);
+  const started = Date.now();
+  let usd = 0;
+
+  const rows = await pool(cases, 2, async (c) => {
+    const store = new MemorySessionStore();
+    let session = await store.create({ adult: true, consent: false });
+    const messages: Msg[] = [];
+    let reachedAt: number | null = null;
+    let final: Final | null = null;
+    const replaced: string[] = [];
+    let stage = "intake";
+    for (let i = 0; i < c.turns.length; i++) {
+      messages.push({ role: "user", text: c.turns[i] });
+      const out = await runTurn(
+        { chat, decision, catalogue, config, keywordFloor, emit: () => {}, signal: AbortSignal.timeout(300_000), now: Date.now },
+        { session, messages },
+      );
+      usd += out.audit.costUsd;
+      session = out.session;
+      final = out.final;
+      stage = final.stage;
+      messages.push({ role: "assistant", text: final.reply });
+      if (final.replaced) replaced.push(final.replaced.reason);
+      if (final.stage === "recommend" || final.stage === "handoff") {
+        reachedAt = final.stage === "recommend" ? i + 1 : null;
+        break;
+      }
+    }
+    const got = (final?.helpTypes ?? []).map((l) => LABEL_TO_ID[l] ?? l);
+    const cards = final?.cards ?? [];
+    return {
+      id: c.id,
+      lang: c.lang,
+      expect: c.expect,
+      got,
+      stage,
+      reachedAt,
+      helpTypesOk: reachedAt !== null && c.expect.every((e) => got.includes(e)),
+      cards: cards.map((x) => x.id),
+      cardsValid: cards.every((x) => known.has(x.id) && allowed.has(x.url)),
+      replyUrls: messages.filter((m) => m.role === "assistant").some((m) => /https?:\/\/|www\./i.test(m.text)),
+      replaced,
+    };
+  });
+
+  const n = rows.length;
+  const result = {
+    suite: "recommendation",
+    target,
+    runAt: new Date().toISOString(),
+    cases: n,
+    costUsd: Number(usd.toFixed(6)),
+    seconds: Math.round((Date.now() - started) / 1000),
+    metrics: {
+      reachedRecommend: rows.filter((r) => r.reachedAt !== null).length / n,
+      helpTypeMatch: rows.filter((r) => r.helpTypesOk).length / n,
+      meanTurnsToRecommend:
+        rows.filter((r) => r.reachedAt !== null).reduce((a, r) => a + r.reachedAt!, 0) / Math.max(1, rows.filter((r) => r.reachedAt !== null).length),
+      hallucinatedCards: rows.filter((r) => !r.cardsValid).length,
+      repliesWithLinks: rows.filter((r) => r.replyUrls).length,
+      stockFallbackTurns: rows.reduce((a, r) => a + r.replaced.length, 0),
+      byLang: {
+        en: rows.filter((r) => r.lang === "en" && r.helpTypesOk).length / rows.filter((r) => r.lang === "en").length,
+        hi: rows.filter((r) => r.lang === "hi" && r.helpTypesOk).length / rows.filter((r) => r.lang === "hi").length,
+      },
+    },
+    rows,
+  };
+  const dir = path.join(ROOT, "evals/results");
+  mkdirSync(dir, { recursive: true });
+  const stamp = result.runAt.replace(/[:.]/g, "-");
+  writeFileSync(path.join(dir, `${stamp}-recommendation-${target}.json`), JSON.stringify(result, null, 2));
+  writeFileSync(path.join(dir, `latest-recommendation-${target}.json`), JSON.stringify(result, null, 2));
+  return result;
+}
+
 const pct = (x: number | null) => (x === null ? "  n/a" : `${(x * 100).toFixed(0).padStart(4)}%`);
 
 async function main() {
   const suite = arg("suite", "risk");
-  if (suite !== "risk") throw new Error(`unknown suite: ${suite} (only 'risk' exists so far)`);
+  if (suite === "recommendation") {
+    const r = await runRecommendation(arg("target", "chain"));
+    const m = r.metrics;
+    console.log(`recommendation suite (${r.target}): ${r.cases} cases, ${r.seconds}s, $${r.costUsd}`);
+    console.log(`reached recommend ${pct(m.reachedRecommend)} · help types match ${pct(m.helpTypeMatch)} (en ${pct(m.byLang.en)}, hi ${pct(m.byLang.hi)}) · mean turns ${m.meanTurnsToRecommend.toFixed(1)}`);
+    console.log(`hallucinated cards ${m.hallucinatedCards} · replies with links ${m.repliesWithLinks} · stock-fallback turns ${m.stockFallbackTurns}`);
+    for (const row of r.rows.filter((x) => !x.helpTypesOk)) {
+      console.log(`miss ${row.id}: expected ${row.expect.join("+")}, got ${row.got.join("+") || "-"} (stage ${row.stage}, replaced ${row.replaced.join(",") || "none"})`);
+    }
+    return;
+  }
+  if (suite !== "risk") throw new Error(`unknown suite: ${suite}`);
   const r = await runRisk();
   console.log(`risk suite: ${r.cases} cases, ${r.jevErrors} Jev errors, ${r.seconds}s, $${r.costUsd}, ${r.jevModel}`);
   console.log("                 imminent R/P      elevated R/P      none R/P      any-risk R/P");

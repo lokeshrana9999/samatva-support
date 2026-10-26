@@ -3,6 +3,8 @@ import { config } from "@config";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { ChatError, DecisionError, type ChatModel, type DecisionModel } from "@/core/ports";
 import { runTurn } from "@/core/turn";
+import { JsonCatalogue } from "@/adapters/catalogue/json";
+import { EMPTY_NEEDS, type NeedsRecord } from "@/core/needs";
 import type { Msg, Phase, SessionState } from "@/core/types";
 
 const session = (over: Partial<SessionState> = {}): SessionState => ({
@@ -14,6 +16,7 @@ const session = (over: Partial<SessionState> = {}): SessionState => ({
   beingHarmed: false,
   transcriptConsent: false,
   historyMac: null,
+  needs: null,
   version: 0,
   ...over,
 });
@@ -46,7 +49,7 @@ const calm: RiskOut = {
 const clean: CheckOut = { diagnosis: 0.02, medicalAdvice: 0.01, claimsHuman: 0.01, model: "jev-test", usage };
 
 // A scripted gate: fixed answers, not a model (design D20).
-function jev(risk: Partial<RiskOut> | "throw" = {}, checks: (Partial<CheckOut> | "throw")[] = [{}]) {
+function jev(risk: Partial<RiskOut> | "throw" = {}, checks: (Partial<CheckOut> | "throw")[] = [{}], needs: NeedsRecord = EMPTY_NEEDS) {
   let n = 0;
   return {
     riskCalls: 0,
@@ -54,6 +57,9 @@ function jev(risk: Partial<RiskOut> | "throw" = {}, checks: (Partial<CheckOut> |
       this.riskCalls++;
       if (risk === "throw") throw new DecisionError("down");
       return { ...calm, ...risk };
+    },
+    async extractNeeds() {
+      return { needs, model: "jev-test", usage };
     },
     async checkReply() {
       const c = checks[Math.min(n++, checks.length - 1)];
@@ -67,6 +73,7 @@ function deps(chat: ChatModel, decision: DecisionModel = jev(), phases: Phase[] 
   return {
     chat,
     decision,
+    catalogue: new JsonCatalogue(),
     config,
     keywordFloor: compileFloor(config.riskKeywords),
     emit: (p: Phase) => phases.push(p),

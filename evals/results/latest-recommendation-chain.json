@@ -1,0 +1,665 @@
+{
+  "suite": "recommendation",
+  "target": "chain",
+  "runAt": "2026-10-26T06:38:37.737Z",
+  "cases": 24,
+  "costUsd": 0.006329,
+  "seconds": 20,
+  "metrics": {
+    "reachedRecommend": 1,
+    "helpTypeMatch": 1,
+    "meanTurnsToRecommend": 2.0416666666666665,
+    "hallucinatedCards": 0,
+    "repliesWithLinks": 0,
+    "stockFallbackTurns": 46,
+    "byLang": {
+      "en": 1,
+      "hi": 1
+    }
+  },
+  "rows": [
+    {
+      "id": "rec-en-01",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-02",
+      "lang": "en",
+      "expect": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-14",
+        "t-11",
+        "t-02",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-03",
+      "lang": "en",
+      "expect": [
+        "couples_therapist"
+      ],
+      "got": [
+        "couples_therapist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 1,
+      "helpTypesOk": true,
+      "cards": [
+        "t-09",
+        "t-10"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "medical"
+      ]
+    },
+    {
+      "id": "rec-en-04",
+      "lang": "en",
+      "expect": [
+        "self_care"
+      ],
+      "got": [
+        "self_care",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-self-care"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-05",
+      "lang": "en",
+      "expect": [
+        "psychiatrist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-11",
+        "t-12",
+        "t-01",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-06",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-02",
+        "t-05",
+        "t-08",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-07",
+      "lang": "en",
+      "expect": [
+        "psychiatrist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-12",
+        "t-13",
+        "t-01",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-08",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-06",
+        "t-01",
+        "t-05",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-09",
+      "lang": "en",
+      "expect": [
+        "crisis_line",
+        "psychiatrist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-11",
+        "t-12",
+        "t-02",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-10",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-11",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-04",
+        "t-01",
+        "t-05",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-en-12",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-14",
+        "t-11",
+        "t-07",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-01",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-02",
+      "lang": "hi",
+      "expect": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-14",
+        "t-11",
+        "t-02",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-03",
+      "lang": "hi",
+      "expect": [
+        "couples_therapist"
+      ],
+      "got": [
+        "couples_therapist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-09",
+        "t-01",
+        "t-04",
+        "svc-therapy",
+        "svc-couples"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-04",
+      "lang": "hi",
+      "expect": [
+        "self_care"
+      ],
+      "got": [
+        "self_care",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-self-care"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-05",
+      "lang": "hi",
+      "expect": [
+        "psychiatrist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-11",
+        "t-13",
+        "t-01",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-06",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-02",
+        "t-05",
+        "t-08",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-07",
+      "lang": "hi",
+      "expect": [
+        "crisis_line",
+        "psychiatrist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-11",
+        "t-14",
+        "t-02",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-08",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-11",
+        "t-13",
+        "t-01",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-09",
+      "lang": "hi",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-hi-10",
+      "lang": "hi",
+      "expect": [
+        "psychiatrist"
+      ],
+      "got": [
+        "crisis_line",
+        "psychiatrist",
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 2,
+      "helpTypesOk": true,
+      "cards": [
+        "t-13",
+        "t-11",
+        "t-01",
+        "svc-therapy",
+        "svc-psychiatry"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-mix-01",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-01",
+        "t-05",
+        "t-04",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down",
+        "providers_down"
+      ]
+    },
+    {
+      "id": "rec-mix-02",
+      "lang": "en",
+      "expect": [
+        "therapist"
+      ],
+      "got": [
+        "therapist"
+      ],
+      "stage": "recommend",
+      "reachedAt": 3,
+      "helpTypesOk": true,
+      "cards": [
+        "t-02",
+        "t-05",
+        "t-08",
+        "svc-therapy",
+        "svc-find"
+      ],
+      "cardsValid": true,
+      "replyUrls": false,
+      "replaced": [
+        "providers_down",
+        "providers_down",
+        "providers_down"
+      ]
+    }
+  ]
+}

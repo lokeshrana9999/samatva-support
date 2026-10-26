@@ -1,0 +1,9 @@
+[
+  { "id": "elevated-risk", "when": { "risk": ["elevated"] }, "add": ["crisis_line", "psychiatrist"] },
+  { "id": "severe-long", "when": { "impact": ["severe"], "duration": ["over_3_months"] }, "add": ["psychiatrist", "therapist"] },
+  { "id": "severe-now", "when": { "impact": ["severe"], "urgency": ["now"] }, "add": ["psychiatrist"] },
+  { "id": "sleep-substance", "when": { "concerns": ["sleep", "substance_use"], "impact": ["some", "severe"] }, "add": ["psychiatrist"] },
+  { "id": "couples", "when": { "forWhom": ["with_partner"] }, "add": ["couples_therapist"] },
+  { "id": "mild-recent", "when": { "impact": ["little"], "duration": ["under_2_weeks"] }, "add": ["self_care"] },
+  { "id": "default", "when": {}, "add": ["therapist"] }
+]

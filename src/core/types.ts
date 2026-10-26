@@ -26,18 +26,21 @@ export type LimitKind =
   | "hourly_turns"
   | "spend";
 
+// Catalogue fields only, never model text (spec 2a). Therapists are synthetic
+// samples (`sample: true`) linking to Amaha's real booking page for their kind
+// of help; services are real Amaha pages described in our own words.
 export type Card = {
   id: string;
   kind: "therapist" | "service";
   name: string;
   title: string;
+  summary: string | null;
   languages: string[];
   specialties: string[];
   modes: string[];
   cities: string[];
-  profileUrl: string;
-  sourceUrl: string;
-  copiedAt: string;
+  url: string;
+  sample: boolean;
 };
 
 export type CrisisLine = {
@@ -93,5 +96,6 @@ export type SessionState = {
   beingHarmed: boolean;
   transcriptConsent: boolean;
   historyMac: string | null;
+  needs: import("./needs").NeedsRecord | null;
   version: number;
 };

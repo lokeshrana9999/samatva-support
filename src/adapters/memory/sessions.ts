@@ -17,6 +17,7 @@ export class MemorySessionStore implements SessionStore {
       beingHarmed: false,
       transcriptConsent: init.consent,
       historyMac: null,
+      needs: null,
       version: 0,
     };
     this.rows.set(s.id, s);

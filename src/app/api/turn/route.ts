@@ -115,6 +115,7 @@ export async function POST(req: Request) {
           {
             chat: d.chat,
             decision: d.decision,
+            catalogue: d.catalogue,
             config,
             keywordFloor: d.keywordFloor,
             emit,

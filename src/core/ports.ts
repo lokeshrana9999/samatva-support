@@ -1,7 +1,24 @@
 // The ports the core talks through. Adapters live in src/adapters; the core
 // never imports them (design D10, the import-boundary lint rule).
 import type { Action } from "./action";
-import type { SessionState } from "./types";
+import type { ConcernArea, HelpType, NeedsRecord } from "./needs";
+import type { Card, SessionState } from "./types";
+
+export type TherapistQuery = {
+  helpType: "therapist" | "psychiatrist" | "couples_therapist";
+  concerns: ConcernArea[];
+  language?: string;
+  mode?: "online" | "in_person";
+  city?: string;
+  limit: number;
+};
+export type ServiceQuery = { helpTypes: HelpType[]; mode?: "online" | "in_person" };
+
+export interface Catalogue {
+  searchTherapists(q: TherapistQuery): Promise<Card[]>;
+  searchServices(q: ServiceQuery): Promise<Card[]>;
+  allowedUrls(): ReadonlySet<string>;
+}
 
 export type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
 
@@ -57,6 +74,10 @@ export interface DecisionModel {
     model: string;
     usage: Usage;
   }>;
+  extractNeeds(
+    userTurns: string[],
+    signal: AbortSignal,
+  ): Promise<{ needs: NeedsRecord; model: string; usage: Usage }>;
   checkReply(
     reply: string,
     stage: string,

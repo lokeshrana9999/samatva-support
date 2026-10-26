@@ -10,6 +10,8 @@
     "beingHarmedNoulP": 0.3
   },
   "replyCheckP": 0.3,
+  "needsP": 0.6,
+  "toolLoopMaxCalls": 3,
   "jevTimeoutMs": 1500,
   "jevMaxRetries": 1,
   "jevDeadlineMs": 4000
