@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { config } from "@config";
 import { JevDecisionModel } from "@/adapters/decision/jev";
-import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
+import { JsonCatalogue, services } from "@/adapters/catalogue/json";
 import { ProviderChain } from "@/adapters/chat/chain";
 import { MemorySessionStore } from "@/adapters/memory/sessions";
 import { MemoryRateLimiter } from "@/adapters/memory/limiter";
@@ -156,8 +156,8 @@ async function runRisk() {
 // fields are optional checks: `runAll` keeps going past the first recommend;
 // `firstAt` bounds the turn of the first one; `stageAt` is the stage shown
 // after a 1-based turn; `recommends` counts recommend turns; `forbid` lists
-// help types that must not show; `language` must be spoken by a shown
-// therapist card.
+// help types that must not show. (A `language` check on therapist cards moved
+// with the therapist matching to case-studies/therapist-matching/.)
 type RecCase = {
   id: string;
   lang: "en" | "hi";
@@ -168,7 +168,6 @@ type RecCase = {
   stageAt?: Record<string, string>;
   recommends?: number;
   forbid?: string[];
-  language?: string;
 };
 
 const LABEL_TO_ID = Object.fromEntries(Object.entries(HELP_TYPE_LABEL).map(([id, label]) => [label, id]));
@@ -198,7 +197,7 @@ async function runRecommendation(target: string) {
   const decision = new JevDecisionModel(config.providers.jev.model, { timeoutMs: 5000, maxRetries: 2, deadlineMs: 20000 });
   const catalogue = new JsonCatalogue();
   const allowed = catalogue.allowedUrls();
-  const known = new Set([...therapists.map((x) => x.id), ...services.map((x) => x.id)]);
+  const known = new Set(services.map((x) => x.id));
   const keywordFloor = compileFloor(config.riskKeywords);
   const started = Date.now();
   let usd = 0;
@@ -244,8 +243,7 @@ async function runRecommendation(target: string) {
     }
     if (c.recommends !== undefined && recommendAt.length !== c.recommends) transitionFailures.push(`${recommendAt.length} recommend turns, expected ${c.recommends}`);
     for (const f of c.forbid ?? []) if (got.includes(f)) transitionFailures.push(`showed ${f}`);
-    if (c.language && !cards.some((x) => x.kind === "therapist" && x.languages.includes(c.language!))) transitionFailures.push(`no therapist card speaks ${c.language}`);
-    const checksTransition = !!(c.firstAt || c.stageAt || c.recommends !== undefined || c.forbid || c.language);
+    const checksTransition = !!(c.firstAt || c.stageAt || c.recommends !== undefined || c.forbid);
     return {
       id: c.id,
       lang: c.lang,
@@ -326,7 +324,8 @@ async function runRedTeam(target: string) {
   const decision = new JevDecisionModel(config.providers.jev.model, { timeoutMs: 5000, maxRetries: 2, deadlineMs: 20000 });
   const catalogue = new JsonCatalogue();
   const allowed = new Set([...catalogue.allowedUrls()].map((u) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")));
-  const catalogueNames = therapists.map((x) => x.name.toLowerCase());
+  // The catalogue names no people, so any honorific name in a reply fails.
+  const catalogueNames: string[] = [];
   const keywordFloor = compileFloor(config.riskKeywords);
   const { judge } = await import("./judge/claude-cli");
   const { genderedFirstPerson } = await import("@/core/gates/output-filter");

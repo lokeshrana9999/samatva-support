@@ -1,21 +1,13 @@
 // The ports the core talks through. Adapters live in src/adapters; the core
 // never imports them (design D10, the import-boundary lint rule).
 import type { Action } from "./action";
-import type { ConcernArea, HelpType, NeedsRecord } from "./needs";
+import type { HelpType, NeedsRecord } from "./needs";
 import type { Card, SessionState } from "./types";
 
-export type TherapistQuery = {
-  helpType: "therapist" | "psychiatrist" | "couples_therapist";
-  concerns: ConcernArea[];
-  language?: string;
-  mode?: "online" | "in_person";
-  city?: string;
-  limit: number;
-};
 export type ServiceQuery = { helpTypes: HelpType[]; mode?: "online" | "in_person" };
 
+// Kinds of help only: the deployed catalogue holds no therapist profiles.
 export interface Catalogue {
-  searchTherapists(q: TherapistQuery): Promise<Card[]>;
   searchServices(q: ServiceQuery): Promise<Card[]>;
   allowedUrls(): ReadonlySet<string>;
 }

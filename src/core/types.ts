@@ -27,21 +27,18 @@ export type LimitKind =
   | "hourly_turns"
   | "spend";
 
-// Catalogue fields only, never model text (spec 2a). Therapists are synthetic
-// samples (`sample: true`) linking to a free public service for their kind of
-// help; services are free public resources described in our own words.
+// Catalogue fields only, never model text (spec 2a). Every card is a generic
+// kind of help linked to a free public resource, described in our own words.
+// The deployed app shows no therapist profiles; that work is a case study
+// (docs/case-studies/therapist-matching.md).
 export type Card = {
   id: string;
-  kind: "therapist" | "service";
+  kind: "service";
   name: string;
-  title: string;
-  summary: string | null;
-  languages: string[];
-  specialties: string[];
+  summary: string;
   modes: string[];
   cities: string[];
   url: string;
-  sample: boolean;
 };
 
 export type CrisisLine = {

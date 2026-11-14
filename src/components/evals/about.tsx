@@ -44,13 +44,13 @@ export function AboutDemo() {
       </h2>
       <p className="mt-2">
         samatva support is a chat assistant that listens first, works out what kind of help might fit, and points to
-        free public resources and sample therapist profiles. A controller in code owns the conversation stages and the
+        free public resources. A controller in code owns the conversation stages and the
         safety gates; the language model only writes the wording inside them. It is an AI, not a clinician and not an
         emergency service.
       </p>
       <p className="mt-3">
         It is an independent demo of a mental-health support agent whose safety gates live in code, built by Lokesh.
-        Therapist profiles are invented samples, not real clinicians, and the service links go to free public resources
+        It suggests kinds of help, never an individual therapist, and every link goes to a free public resource
         (Tele-MANAS and the World Health Organization), never to a company or booking page.
       </p>
 

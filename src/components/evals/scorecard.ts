@@ -232,6 +232,7 @@ function recommendationSuite(): Suite {
     ],
     misses: runs.flatMap(recMisses),
     notes: [
+      "These runs predate 2026-11-14, when recommend turns still showed sample therapist profile cards next to the service cards. The app now shows service cards only, and the therapist matching is a case study (linked from the README), so this suite needs a re-run. Help types come from the rules table and didn't change.",
       'The rules table adds "a therapist" to every recommendation by design, so a self-care case shows a therapist too; the exact-match row ignores it.',
       "Unasked-for crisis lines come from Jev reading severity as elevated risk (severe low mood, eating, drinking). That errs toward showing the numbers.",
       "On the Grok CLI, 13 of the 14 stock lines came from the CLI itself failing, mostly exiting with \"max turns reached\". The 14th is the only rule break in any eval run: a Grok reply in rec-hi-02 read as a diagnosis, and the output filter replaced it.",

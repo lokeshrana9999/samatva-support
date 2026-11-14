@@ -1,7 +1,6 @@
-"use client";
 // Recommendation cards: catalogue fields only, nothing model-written (D48).
-// Therapists are synthetic samples and say so on the card.
-import { useState } from "react";
+// Every card is a kind of help linked to a free public resource; the app shows
+// no therapist profiles (docs/case-studies/therapist-matching.md).
 import type { Card } from "@/core/types";
 
 export function HelpTypeChips({ labels }: { labels: string[] }) {
@@ -38,49 +37,12 @@ function ExternalLink({ href, label, ariaLabel }: { href: string; label: string;
   );
 }
 
-function TherapistCard({ c }: { c: Card }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? c.specialties : c.specialties.slice(0, 3);
-  return (
-    <article className="rounded-lg border border-line bg-surface p-4">
-      <p className="text-[13px] font-semibold tracking-wide text-muted">THERAPIST · SAMPLE PROFILE</p>
-      <h3 className="mt-1 text-[17px] leading-6 font-semibold">{c.name}</h3>
-      <p>{c.title}</p>
-      {c.languages.length > 0 && <p className="text-[15px]">Speaks {c.languages.join(", ")}</p>}
-      {shown.length > 0 && (
-        <p className="text-[15px]">
-          {shown.join(" · ")}
-          {!all && c.specialties.length > 3 && (
-            <button
-              className="ml-2 underline"
-              onClick={() => setAll(true)}
-              aria-label={`Show ${c.specialties.length - 3} more specialties`}
-            >
-              +{c.specialties.length - 3}
-            </button>
-          )}
-        </p>
-      )}
-      <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
-      <ExternalLink
-        href={c.url}
-        label="Find real help like this"
-        ariaLabel={`Find real help on ${host(c.url)} for the kind of help in the sample profile ${c.name}`}
-      />
-      <p className="mt-1 text-[13px] leading-[18px] text-muted">
-        Sample profile, not a real clinician, so they can&apos;t be booked. The link goes to a free public service that
-        can connect you with real help of this kind.
-      </p>
-    </article>
-  );
-}
-
 function ServiceCard({ c }: { c: Card }) {
   return (
     <article className="rounded-lg border border-line bg-surface p-4">
       <p className="text-[13px] font-semibold tracking-wide text-muted">SERVICE</p>
       <h3 className="mt-1 text-[17px] leading-6 font-semibold">{c.name}</h3>
-      {c.summary && <p>{c.summary}</p>}
+      <p>{c.summary}</p>
       <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
       <ExternalLink href={c.url} label={`View on ${host(c.url)}`} ariaLabel={`View ${c.name} on ${host(c.url)}`} />
       <p className="mt-1 text-[13px] leading-[18px] text-muted">
@@ -91,15 +53,10 @@ function ServiceCard({ c }: { c: Card }) {
 }
 
 export function RecommendationCards({ cards }: { cards: Card[] }) {
-  const services = cards.filter((c) => c.kind === "service");
-  const therapists = cards.filter((c) => c.kind === "therapist");
   return (
     <div className="flex flex-col gap-3">
-      {services.map((c) => (
+      {cards.map((c) => (
         <ServiceCard key={c.id} c={c} />
-      ))}
-      {therapists.map((c) => (
-        <TherapistCard key={c.id} c={c} />
       ))}
     </div>
   );
