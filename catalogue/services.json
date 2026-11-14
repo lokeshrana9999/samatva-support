@@ -1,65 +1,65 @@
 {
-  "note": "Real Amaha service pages, linked only. Names are the service types; every summary is our own wording, nothing copied from Amaha's site (its terms forbid copying content). URLs checked 2026-10-26.",
+  "note": "Generic kinds of help, each linked to a free public resource: Tele-MANAS (India's national tele mental health programme, run by the Ministry of Health) or the World Health Organization. No company or booking pages. Every summary is our own wording. URLs checked 2026-11-14.",
   "services": [
     {
       "id": "svc-therapy",
-      "name": "Therapy with Amaha",
-      "summary": "One-to-one sessions with a therapist, online or at a centre.",
+      "name": "Talking therapy",
+      "summary": "One-to-one sessions with a counsellor or psychologist, online or in person. Tele-MANAS, India's free government mental health line, is one place to start.",
       "modes": ["online", "in_person"],
-      "cities": ["bengaluru", "mumbai", "new_delhi", "gurugram"],
-      "url": "https://www.amahahealth.com/services/therapy/",
+      "cities": [],
+      "url": "https://telemanas.mohfw.gov.in/home",
       "helpTypes": ["therapist"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     },
     {
       "id": "svc-psychiatry",
-      "name": "Psychiatry with Amaha",
-      "summary": "Consultations with a psychiatrist, who can assess and, where needed, prescribe.",
+      "name": "Seeing a psychiatrist",
+      "summary": "Consultations with a psychiatrist, who can assess and, where needed, prescribe. Tele-MANAS can refer you on to one at no cost.",
       "modes": ["online", "in_person"],
-      "cities": ["bengaluru", "mumbai", "new_delhi", "gurugram"],
-      "url": "https://www.amahahealth.com/services/psychiatry/",
+      "cities": [],
+      "url": "https://telemanas.mohfw.gov.in/home",
       "helpTypes": ["psychiatrist"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     },
     {
       "id": "svc-couples",
-      "name": "Couples therapy with Amaha",
-      "summary": "Sessions for two partners together, with a therapist who works with couples.",
+      "name": "Couples therapy",
+      "summary": "Sessions for two partners together, with a therapist who works with couples. A free Tele-MANAS counsellor is one place to start talking it through.",
       "modes": ["online", "in_person"],
-      "cities": ["bengaluru", "mumbai", "new_delhi", "gurugram"],
-      "url": "https://www.amahahealth.com/services/couples-therapy/",
+      "cities": [],
+      "url": "https://telemanas.mohfw.gov.in/home",
       "helpTypes": ["couples_therapist"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     },
     {
       "id": "svc-self-care",
-      "name": "Amaha self-care app",
-      "summary": "Guided exercises and tools you can use on your own, at your own pace.",
+      "name": "Self-help guide for stress",
+      "summary": "Short illustrated exercises you can do on your own, a few minutes a day, from the World Health Organization. Free to download.",
       "modes": ["online"],
       "cities": [],
-      "url": "https://www.amahahealth.com/services/self-care/",
+      "url": "https://www.who.int/publications/i/item/9789240003927",
       "helpTypes": ["self_care"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     },
     {
       "id": "svc-community",
-      "name": "Amaha community",
-      "summary": "A space to hear from and talk with other people going through similar things.",
+      "name": "Peer support",
+      "summary": "Hearing from and talking with other people going through similar things. If you're not sure where to find a group, Tele-MANAS's free line is one place to ask.",
       "modes": ["online"],
       "cities": [],
-      "url": "https://www.amahahealth.com/services/community/",
+      "url": "https://telemanas.mohfw.gov.in/home",
       "helpTypes": ["self_care"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     },
     {
       "id": "svc-find",
-      "name": "Find a therapist or psychiatrist on Amaha",
-      "summary": "Browse Amaha's clinicians and book a first session.",
+      "name": "Free counselling and referral",
+      "summary": "Call 14416 any time to talk to a trained counsellor, who can connect you with a psychologist or psychiatrist. Free, in several Indian languages.",
       "modes": ["online", "in_person"],
-      "cities": ["bengaluru", "mumbai", "new_delhi", "gurugram"],
-      "url": "https://www.amahahealth.com/therapy-psychiatry/",
+      "cities": [],
+      "url": "https://telemanas.mohfw.gov.in/home",
       "helpTypes": ["therapist", "psychiatrist"],
-      "checkedOn": "2026-10-26"
+      "checkedOn": "2026-11-14"
     }
   ]
 }

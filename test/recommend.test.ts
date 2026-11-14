@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { config } from "@config";
-import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
+import { ALLOWED_ORIGINS, allowlisted, JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { EMPTY_NEEDS, enough, helpTypesFor, type NeedsRecord } from "@/core/needs";
 import type { Action } from "@/core/action";
@@ -96,7 +96,7 @@ describe("rules and the needs gate", () => {
 });
 
 describe("catalogue", () => {
-  it("links every card to an allowlisted Amaha page and marks therapists as samples", async () => {
+  it("links every card to an allowlisted public resource and marks therapists as samples", async () => {
     const cat = new JsonCatalogue();
     const allowed = cat.allowedUrls();
     const th = await cat.searchTherapists({ helpType: "therapist", concerns: ["stress_anxiety"], limit: 3 });
@@ -105,8 +105,16 @@ describe("catalogue", () => {
       expect(c.sample).toBe(true);
       expect(allowed.has(c.url)).toBe(true);
     }
-    expect(services.every((s) => s.url.startsWith("https://www.amahahealth.com/"))).toBe(true);
+    expect(services.every((s) => ALLOWED_ORIGINS.some((o) => s.url.startsWith(o)))).toBe(true);
+    for (const s of services) expect(allowed.has(s.url)).toBe(true);
     expect(therapists.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("allowlists only public-resource origins, not lookalike hosts", () => {
+    expect(allowlisted("https://www.who.int/publications/i/item/9789240003927")).toBe(true);
+    expect(allowlisted("https://telemanas.mohfw.gov.in/home")).toBe(true);
+    expect(allowlisted("https://www.who.int.example.com/")).toBe(false);
+    expect(allowlisted("https://example.com/therapy")).toBe(false);
   });
 
   it("prefers the requested language without leaving the person with nobody", async () => {

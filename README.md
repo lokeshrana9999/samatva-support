@@ -1,8 +1,8 @@
 # samatva-support
 
-A support assistant that listens first, then works out what kind of mental health help might fit: self-care, a therapist, a psychiatrist, couples therapy, or a crisis line. It points to Amaha's service pages and to sample therapist profiles. Code decides the conversation's stage and applies every safety gate. The risk readings and reply checks come from Jev, TypeSafe's model for typed decisions, which returns probabilities that code compares with fixed thresholds. The chat model only writes the wording inside those limits.
+A support assistant that listens first, then works out what kind of mental health help might fit: self-care, a therapist, a psychiatrist, couples therapy, or a crisis line. It points to free public resources (Tele-MANAS and the World Health Organization) and to sample therapist profiles. Code decides the conversation's stage and applies every safety gate. The risk readings and reply checks come from Jev, TypeSafe's model for typed decisions, which returns probabilities that code compares with fixed thresholds. The chat model only writes the wording inside those limits.
 
-Lokesh built it for Amaha's AI Engineer role (build option 1: "a conversational agent that helps someone figure out what kind of help they might need"). It's an independent demo, not affiliated with Amaha. The therapist profiles are invented, Amaha's service pages are linked but never copied, and every conversation in the evals is synthetic. Its restraint (listen before suggesting, never diagnose or advise on medicines, say plainly that it's an AI) comes from [samatva](https://github.com/lokeshrana9999/samatva), Lokesh's open-source set of skills for supportive conversations.
+It's an independent demo of a mental-health support agent whose safety gates live in code, built by Lokesh. The therapist profiles are invented, the service links go to free public resources rather than any company or booking page, and every conversation in the evals is synthetic. Its restraint (listen before suggesting, never diagnose or advise on medicines, say plainly that it's an AI) comes from [samatva](https://github.com/lokeshrana9999/samatva), Lokesh's open-source set of skills for supportive conversations.
 
 | what | where |
 |---|---|
@@ -137,7 +137,7 @@ Locally, chat goes only through the Claude CLI (Haiku, the default) or the Grok 
 | `src/composition/index.ts` | wires adapters to ports; production and local wiring differ here |
 | `src/app/`, `src/components/` | Next.js routes (chat, `/join`, `/login`, `/evals`, `/api/*`) and the UI |
 | `config/` | thresholds, help rules, risk keywords, crisis lines, fixed replies, limits, prices, provider chain |
-| `catalogue/` | sample therapist profiles and linked Amaha services |
+| `catalogue/` | sample therapist profiles and kinds of help linked to free public resources |
 | `evals/` | cases, runner, judge and results |
 | `supabase/migrations/` | tables, functions, row-level security and purge jobs |
 
@@ -147,7 +147,7 @@ No clinician has reviewed the rules table, the risk keywords or the thresholds; 
 
 The deployed chat chain (Gemini, then OpenRouter) is checked only by spot turns on the live site, since local evals run on the CLIs. In those spot checks Gemini also refused the diagnosis and dose pushes by itself, so the red team measures the models more than the gates; the reply-check suite measures the gates directly.
 
-It covers English and Hinglish in roman script, not Devanagari or other Indian languages, and its crisis lines are for India only. The spend counter prices Gemini's free tier at OpenRouter's list price, so the $5 cap trips early. There's no booking, no accounts and no memory across conversations. Amaha's real directory and booking would plug in behind the `Catalogue` port.
+It covers English and Hinglish in roman script, not Devanagari or other Indian languages, and its crisis lines are for India only. The spend counter prices Gemini's free tier at OpenRouter's list price, so the $5 cap trips early. There's no booking, no accounts and no memory across conversations. A real provider directory and booking would plug in behind the `Catalogue` port.
 
 ## license
 

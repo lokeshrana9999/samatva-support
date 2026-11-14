@@ -1,6 +1,6 @@
 // Catalogue over the repo's JSON files (design D38: the repo JSON is the
 // source of truth). Tens of rows, so a typed filter is the honest search;
-// embeddings would be for show. Amaha's real directory would be another
+// embeddings would be for show. A real provider directory would be another
 // adapter behind the same port.
 import { z } from "zod";
 import servicesJson from "../../../catalogue/services.json";
@@ -9,13 +9,18 @@ import { City, ConcernArea, HelpType, Language } from "@/core/needs";
 import type { Catalogue, ServiceQuery, TherapistQuery } from "@/core/ports";
 import type { Card } from "@/core/types";
 
+// Every catalogue link must sit under one of these origins: free public
+// resources only, never a company or booking page.
+export const ALLOWED_ORIGINS = ["https://telemanas.mohfw.gov.in/", "https://www.who.int/"] as const;
+export const allowlisted = (u: string) => ALLOWED_ORIGINS.some((o) => u.startsWith(o));
+
 const Service = z.strictObject({
   id: z.string(),
   name: z.string(),
   summary: z.string(),
   modes: z.array(z.enum(["online", "in_person"])),
   cities: z.array(City),
-  url: z.url().startsWith("https://www.amahahealth.com/"),
+  url: z.url().refine(allowlisted, "url must be under an allowlisted origin"),
   helpTypes: z.array(HelpType).min(1),
   checkedOn: z.iso.date(),
 });
@@ -35,12 +40,14 @@ const Therapist = z.strictObject({
 export const services = z.strictObject({ note: z.string(), services: z.array(Service) }).parse(servicesJson).services;
 export const therapists = z.strictObject({ note: z.string(), therapists: z.array(Therapist) }).parse(therapistsJson).therapists;
 
-// A sample therapist links to Amaha's real booking page for that kind of help.
-const BOOK_URL: Record<string, string> = {
-  therapist: "https://www.amahahealth.com/services/therapy/",
-  psychiatrist: "https://www.amahahealth.com/services/psychiatry/",
-  couples_therapist: "https://www.amahahealth.com/services/couples-therapy/",
+// A sample therapist can't be booked, so the card links to a free public
+// service (Tele-MANAS) that can connect someone with real help of that kind.
+const HELP_URL: Record<string, string> = {
+  therapist: "https://telemanas.mohfw.gov.in/home",
+  psychiatrist: "https://telemanas.mohfw.gov.in/home",
+  couples_therapist: "https://telemanas.mohfw.gov.in/home",
 };
+if (!Object.values(HELP_URL).every(allowlisted)) throw new Error("HELP_URL must use allowlisted origins");
 
 const LANGUAGE_LABEL = (l: string) => l[0].toUpperCase() + l.slice(1);
 const CITY_LABEL: Record<string, string> = { bengaluru: "Bengaluru", mumbai: "Mumbai", new_delhi: "New Delhi", gurugram: "Gurugram" };
@@ -57,7 +64,7 @@ function therapistCard(t: z.infer<typeof Therapist>): Card {
     specialties: t.specialties,
     modes: t.modes.map((m) => MODE_LABEL[m]),
     cities: t.cities.map((c) => CITY_LABEL[c] ?? c),
-    url: BOOK_URL[t.helpTypes[0]],
+    url: HELP_URL[t.helpTypes[0]],
     sample: true,
   };
 }
@@ -67,7 +74,7 @@ function serviceCard(s: z.infer<typeof Service>): Card {
     id: s.id,
     kind: "service",
     name: s.name,
-    title: "Amaha service",
+    title: "Free public resource",
     summary: s.summary,
     languages: [],
     specialties: [],
@@ -104,6 +111,6 @@ export class JsonCatalogue implements Catalogue {
   }
 
   allowedUrls(): ReadonlySet<string> {
-    return new Set([...services.map((s) => s.url), ...Object.values(BOOK_URL)]);
+    return new Set([...services.map((s) => s.url), ...Object.values(HELP_URL)]);
   }
 }

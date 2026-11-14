@@ -191,7 +191,7 @@ type Card = {                 // catalogue fields only (spec 2a)
   name: string; title: string; summary: string | null;
   languages: string[]; specialties: string[];
   modes: string[]; cities: string[];
-  url: string;                // an allowlisted amahahealth.com page
+  url: string;                // an allowlisted public-resource page
   sample: boolean;            // true for every therapist (spec 2)
 };
 
@@ -719,7 +719,7 @@ Writes go through an `append_transcript` function that inserts only when `sessio
 
 ### catalogue
 
-As built in step 3, the catalogue is not in Supabase. `catalogue/services.json` (six real Amaha service pages, linked, summaries in our own words) and `catalogue/therapists.json` (14 synthetic profiles) are zod-validated at module load, and `src/adapters/catalogue/json.ts` serves them in every environment. With tens of rows, a database added a seed step and nothing else. The table sketch below stays as the shape a real directory would take behind the same port.
+As built in step 3, the catalogue is not in Supabase. `catalogue/services.json` (six kinds of help, each linked to a free public resource, summaries in our own words) and `catalogue/therapists.json` (14 synthetic profiles) are zod-validated at module load, and `src/adapters/catalogue/json.ts` serves them in every environment. With tens of rows, a database added a seed step and nothing else. The table sketch below stays as the shape a real directory would take behind the same port.
 
 ```sql
 create table catalogue_therapists (
@@ -730,7 +730,7 @@ create table catalogue_therapists (
   specialties   text[] not null,      -- shown, as listed
   modes         text[] not null,      -- shown
   cities        text[] not null default '{}',
-  url           text not null,        -- shown: an amahahealth.com page
+  url           text not null,        -- shown: an allowlisted public-resource page
   help_types    text[] not null,      -- internal index, never shown
   concern_areas text[] not null,      -- internal index, never shown
   sample        boolean not null,     -- every row today
@@ -888,7 +888,7 @@ Subsets: latin and latin-ext. Fallback stack ends in `system-ui, "Noto Sans Deva
 - Header: wordmark "samatva support" (links to `/`), "Need help now?" button, menu button.
 - "Need help now?" opens a Sheet (bottom on mobile, right on `md` up) with the full crisis line list. Works signed out and in every stage, including when a limit has hit.
 - Menu (signed in only): Under the hood (toggle, off by default, stored in `localStorage` key `samatva:trace`), Theme (System, Light, Dark), Delete my conversation, Start over, Sign out, About this demo (links to `/evals` and the repo).
-- Footer, small, on every route: "Independent demo by Lokesh, not affiliated with Amaha." plus links to `/evals` and the GitHub repo.
+- Footer, small, on every route: "Independent demo by Lokesh" plus links to `/evals` and the GitHub repo.
 
 ### login (`/login`)
 
@@ -943,10 +943,10 @@ Layout top to bottom: header, stage stepper, disclosure banner, transcript, turn
 | line 3 | — | "Speaks " + languages |
 | line 4 | — | first 3 specialties, then "+N" (expands in place) |
 | line 5 | modes, cities | modes, then `cities` joined with commas, if any |
-| link | "View on amahahealth.com" | "Find a therapist on Amaha" (the real booking page for that kind of help) |
-| caption | "Summary in our own words; details are on Amaha's page." | "Sample profile, not a real clinician, so they can't be booked. The link goes to Amaha's real booking page for this kind of help." |
+| link | "View on {domain}", for example "View on who.int" | "Find real help like this" (a free public service for that kind of help) |
+| caption | "Summary in our own words; the link goes to a free public resource, not a booking page." | "Sample profile, not a real clinician, so they can't be booked. The link goes to a free public service that can connect you with real help of this kind." |
 
-- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "Book through Amaha for Ira Menon on amahahealth.com, opens in a new tab".
+- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "Find real help on telemanas.mohfw.gov.in for the kind of help in the sample profile Ira Menon, opens in a new tab".
 - No photos, ratings, prices, or availability.
 - A missing field is omitted, never filled with a placeholder.
 - Help-type chips are plain labels, not buttons.
@@ -1026,9 +1026,9 @@ Reviewed adversarially on 2026-10-26 against the spec's rules and the code (find
 >
 > What you type is sent to AI services to write and check replies: TypeSafe and the model providers named under [About this demo](/evals#about). This happens whether or not you save the conversation.
 >
-> I'll ask a few questions about what's going on, then suggest kinds of help that may fit, with links to Amaha services and sample therapist profiles. What you do next is up to you.
+> I'll ask a few questions about what's going on, then suggest kinds of help that may fit, with links to free public resources and sample therapist profiles. What you do next is up to you.
 >
-> This is an independent demo by Lokesh, not affiliated with Amaha.
+> This is an independent demo by Lokesh.
 
 - 18+ checkbox: "I'm 18 or older (required)"
 - Under-18 hint, shown under Start while unticked: "This demo is for adults. If you're under 18, please talk to an adult you trust, or call Tele-MANAS from the list below."
@@ -1083,10 +1083,10 @@ Replaced-reply notes (English chrome), by `replaced.reason`. The live region ann
 
 ### recommendation cards
 
-- Service link: "View on amahahealth.com", accessible name "View {service} on amahahealth.com, opens in a new tab".
-- Therapist link: "Find a therapist on Amaha", accessible name "Find a real therapist on amahahealth.com for the kind of help in the sample profile {name}, opens in a new tab". It replaces "Book through Amaha", which read as booking the sample person.
-- Therapist caption: "Sample profile, not a real clinician, so they can't be booked. The link goes to Amaha's real booking page for this kind of help."
-- Service caption: "Summary in our own words; details are on Amaha's page."
+- Service link: "View on {domain}", accessible name "View {service} on {domain}, opens in a new tab".
+- Therapist link: "Find real help like this", accessible name "Find real help on {domain} for the kind of help in the sample profile {name}, opens in a new tab". It replaces an earlier "Book through …" label, which read as booking the sample person.
+- Therapist caption: "Sample profile, not a real clinician, so they can't be booked. The link goes to a free public service that can connect you with real help of this kind."
+- Service caption: "Summary in our own words; the link goes to a free public resource, not a booking page."
 - "+N" specialties button: accessible name "Show N more specialties".
 
 ### limits (EN / HI for the body)
@@ -1290,7 +1290,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 | | **evals** | |
 | D43 | Evals wire in-memory stores, real Jev, the target model, fixed scripts [A25] | Runs without the web layer and compares like with like. |
 | | **frontend** | |
-| D44 | Visual direction "calm paper": warm off-white, near-black ink, deep teal accent; Source Serif 4 headings, Inter body [F1] | Calm and deliberate on screen, and clear of Amaha's coral and dark green branding. |
+| D44 | Visual direction "calm paper": warm off-white, near-black ink, deep teal accent; Source Serif 4 headings, Inter body [F1] | Calm and deliberate on screen, and distinct from any one provider's branding. |
 | D45 | Intake is a gate card on `/`; Start stays disabled until 18+ is ticked; the card then collapses into a one-line disclosure banner [F3] | Nobody types before confirming 18+, and the fixed text reads as fixed, not as model output. |
 | D46 | Chat is a quiet transcript: assistant text unboxed, user text in a tinted bubble, a 3-step stage stepper, a "Need help now?" button on every screen [F4] | The controller's stages are visible on the Loom without voice-over. |
 | D47 | Gate visibility: a note under any replaced reply, plus an opt-in "Under the hood" row per turn showing the content-free trace [F5] | The Loom can show the filter catch, the risk tier and provider failover live. |

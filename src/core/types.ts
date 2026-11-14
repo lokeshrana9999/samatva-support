@@ -28,8 +28,8 @@ export type LimitKind =
   | "spend";
 
 // Catalogue fields only, never model text (spec 2a). Therapists are synthetic
-// samples (`sample: true`) linking to Amaha's real booking page for their kind
-// of help; services are real Amaha pages described in our own words.
+// samples (`sample: true`) linking to a free public service for their kind of
+// help; services are free public resources described in our own words.
 export type Card = {
   id: string;
   kind: "therapist" | "service";

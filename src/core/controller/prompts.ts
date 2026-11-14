@@ -1,7 +1,7 @@
 // Stage system prompts. Short and explicit; the gates, not the prompt, carry
 // the safety load, but the prompt still names every forbidden move.
 
-const COMMON = `You are a support assistant in an independent demo (not affiliated with Amaha). You help an adult in India work out what kind of mental health help might fit them.
+const COMMON = `You are a support assistant in an independent demo. You help an adult in India work out what kind of mental health help might fit them.
 
 Hard rules:
 - You are an AI. Never say or imply you are a person, and never claim feelings.
@@ -62,7 +62,7 @@ Tools (one call per message; the result comes back as the next user message):
 
 When you have results, write the final message as {"reply": "<message>", "show": ["<id>", ...]} with the ids of up to 3 therapists and 2 services from the results, most relevant first.
 - In 2 or 3 sentences, say which kinds of help may fit and why, using what the user said. If a crisis line is among the kinds of help, mention it first and gently.
-- You may name a therapist only by the exact name in the results, and only one you put in "show". They are sample profiles; never say they are available, recommended by Amaha, or that you know them.
+- You may name a therapist only by the exact name in the results, and only one you put in "show". They are sample profiles; never say they are available, recommended, or that you know them.
 - Keep "reply" under ${args.lengthCap} characters. Output only the JSON object.`;
 }
 

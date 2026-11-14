@@ -20,6 +20,9 @@ export function HelpTypeChips({ labels }: { labels: string[] }) {
   );
 }
 
+// The bare domain a card links to, shown so the person knows where they're going.
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+
 function ExternalLink({ href, label, ariaLabel }: { href: string; label: string; ariaLabel: string }) {
   return (
     <a
@@ -61,12 +64,12 @@ function TherapistCard({ c }: { c: Card }) {
       <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
       <ExternalLink
         href={c.url}
-        label="Find a therapist on Amaha"
-        ariaLabel={`Find a real therapist on amahahealth.com for the kind of help in the sample profile ${c.name}`}
+        label="Find real help like this"
+        ariaLabel={`Find real help on ${host(c.url)} for the kind of help in the sample profile ${c.name}`}
       />
       <p className="mt-1 text-[13px] leading-[18px] text-muted">
-        Sample profile, not a real clinician, so they can&apos;t be booked. The link goes to Amaha&apos;s real booking
-        page for this kind of help.
+        Sample profile, not a real clinician, so they can&apos;t be booked. The link goes to a free public service that
+        can connect you with real help of this kind.
       </p>
     </article>
   );
@@ -79,8 +82,10 @@ function ServiceCard({ c }: { c: Card }) {
       <h3 className="mt-1 text-[17px] leading-6 font-semibold">{c.name}</h3>
       {c.summary && <p>{c.summary}</p>}
       <p className="text-[15px] text-muted">{[c.modes.join(", "), c.cities.join(", ")].filter(Boolean).join(" · ")}</p>
-      <ExternalLink href={c.url} label="View on amahahealth.com" ariaLabel={`View ${c.name} on amahahealth.com`} />
-      <p className="mt-1 text-[13px] leading-[18px] text-muted">Summary in our own words; details are on Amaha&apos;s page.</p>
+      <ExternalLink href={c.url} label={`View on ${host(c.url)}`} ariaLabel={`View ${c.name} on ${host(c.url)}`} />
+      <p className="mt-1 text-[13px] leading-[18px] text-muted">
+        Summary in our own words; the link goes to a free public resource, not a booking page.
+      </p>
     </article>
   );
 }

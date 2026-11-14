@@ -97,7 +97,7 @@ export function Header({
 export function DemoFooter() {
   return (
     <footer className="mx-auto max-w-[680px] px-4 py-6 text-[13px] leading-[18px] text-muted sm:px-6">
-      Independent demo by Lokesh, not affiliated with Amaha. ·{" "}
+      Independent demo by Lokesh ·{" "}
       <Link className="underline" href="/evals">
         Evals
       </Link>{" "}
