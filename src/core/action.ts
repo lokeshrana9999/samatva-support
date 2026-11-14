@@ -1,11 +1,9 @@
-// The typed JSON action every provider and CLI returns (spec 5e). Step 1 has
-// no tool-using stage, so `tool` and `show` are parsed but unused until step 3.
+// The typed JSON action every provider and CLI returns (spec 5e). The only
+// tool is `search_services`: there is no therapist search, so a model can't
+// ask for a therapist profile in a shape the parser accepts.
 import { z } from "zod";
 
-const ToolCall = z.discriminatedUnion("name", [
-  z.strictObject({ name: z.literal("search_therapists"), args: z.record(z.string(), z.unknown()) }),
-  z.strictObject({ name: z.literal("search_services"), args: z.record(z.string(), z.unknown()) }),
-]);
+const ToolCall = z.strictObject({ name: z.literal("search_services"), args: z.record(z.string(), z.unknown()) });
 
 // `reply` may be left out on a tool call, since it's ignored there; models
 // often send {"tool": ...} alone. A message without a tool must have one.

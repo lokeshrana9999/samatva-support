@@ -1,5 +1,5 @@
 {
-  "note": "Synthetic sample profiles: invented people, not Amaha clinicians. Every card shows 'Sample profile, not a real clinician'. Each links to Amaha's real booking page for that kind of help, never to a profile. Amaha's real directory would replace this file behind the Catalogue port.",
+  "note": "CASE STUDY ONLY, not part of the deployed app (docs/case-studies/therapist-matching.md). Synthetic sample profiles: invented people, not real clinicians and not tied to any provider. When this ran in the app, every card showed 'Sample profile, not a real clinician' and linked to a free public service (Tele-MANAS) that can connect someone with real help of that kind, never to a profile or a booking page.",
   "therapists": [
     {
       "id": "t-01", "name": "Ira Menon", "title": "Counselling Psychologist",

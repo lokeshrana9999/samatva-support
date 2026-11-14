@@ -99,7 +99,7 @@
       "I've felt low for about three months since I moved cities for work.",
       "I'm still working but it's harder, I don't enjoy anything.",
       "Online in English." ] },
-    { "id": "rec-flow-en-01", "lang": "en", "expect": ["therapist"], "firstAt": { "min": 3 }, "language": "Tamil", "turns": [
+    { "id": "rec-flow-en-01", "lang": "en", "expect": ["therapist"], "firstAt": { "min": 3 }, "turns": [
       "I've been feeling really low since I lost my job, about five months ago.",
       "It's hard to do anything most days, I've stopped seeing friends and my sleep is a mess.",
       "Online would be best, and I'd really like someone who speaks Tamil." ] },

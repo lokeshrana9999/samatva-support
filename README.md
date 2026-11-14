@@ -1,8 +1,8 @@
 # samatva-support
 
-A support assistant that listens first, then works out what kind of mental health help might fit: self-care, a therapist, a psychiatrist, couples therapy, or a crisis line. It points to Amaha's service pages and to sample therapist profiles. Code decides the conversation's stage and applies every safety gate. The risk readings and reply checks come from Jev, TypeSafe's model for typed decisions, which returns probabilities that code compares with fixed thresholds. The chat model only writes the wording inside those limits.
+A support assistant that listens first, then works out what kind of mental health help might fit: self-care, a therapist, a psychiatrist, couples therapy, or a crisis line. It points to free public resources (Tele-MANAS and the World Health Organization) and never to an individual therapist. Code decides the conversation's stage and applies every safety gate. The risk readings and reply checks come from Jev, TypeSafe's model for typed decisions, which returns probabilities that code compares with fixed thresholds. The chat model only writes the wording inside those limits.
 
-Lokesh built it for Amaha's AI Engineer role (build option 1: "a conversational agent that helps someone figure out what kind of help they might need"). It's an independent demo, not affiliated with Amaha. The therapist profiles are invented, Amaha's service pages are linked but never copied, and every conversation in the evals is synthetic. Its restraint (listen before suggesting, never diagnose or advise on medicines, say plainly that it's an AI) comes from [samatva](https://github.com/lokeshrana9999/samatva), Lokesh's open-source set of skills for supportive conversations.
+It's an independent demo of a mental-health support agent whose safety gates live in code, built by Lokesh. The service links go to free public resources rather than any company or booking page, and every conversation in the evals is synthetic. Its restraint (listen before suggesting, never diagnose or advise on medicines, say plainly that it's an AI) comes from [samatva](https://github.com/lokeshrana9999/samatva), Lokesh's open-source set of skills for supportive conversations.
 
 | what | where |
 |---|---|
@@ -10,6 +10,7 @@ Lokesh built it for Amaha's AI Engineer role (build option 1: "a conversational 
 | eval scorecard and "About this demo" | https://samatva-support.vercel.app/evals, public |
 | product decisions | [docs/spec.md](docs/spec.md) |
 | system and frontend design | [docs/design.md](docs/design.md) |
+| case study: therapist matching (not in the deployed app) | [docs/case-studies/therapist-matching.md](docs/case-studies/therapist-matching.md) |
 
 ## try it
 
@@ -17,7 +18,7 @@ The chat is open only to reviewers; the repo holds no key. The link Lokesh share
 
 1. Open the reviewer link and enter any email.
 2. Tick the 18+ box and start. Leave the consent box unticked unless you want the transcript stored. A stored transcript is readable only on the server, deleted after 30 days, and deletable from the chat.
-3. Try a Hinglish conversation, one message at a time: "mujhe kuch mahino se office ke kaam ko lekar bahut anxiety ho rahi hai", then "lagbhag chaar mahine ho gaye, neend kharab hai aur kaam pe galtiyan ho rahi hain", then "online theek rahega, Hindi mein baat karna pasand hai". The third turn shows suggestions and therapist cards.
+3. Try a Hinglish conversation, one message at a time: "mujhe kuch mahino se office ke kaam ko lekar bahut anxiety ho rahi hai", then "lagbhag chaar mahine ho gaye, neend kharab hai aur kaam pe galtiyan ho rahi hain", then "online theek rahega, Hindi mein baat karna pasand hai". The third turn shows the kinds of help that fit and cards linking to free public resources.
 4. In a new conversation, send "yeh mera aakhri message hai, alvida sabko". It goes straight to the crisis handoff: fixed text and helplines, with no model call. The conversation stays there; later messages get the same fixed reply.
 5. Turn on "Under the hood" in the menu to see each turn's stage, gate results, provider and latency.
 
@@ -57,7 +58,11 @@ On each `understand` turn, Jev fills a needs record: up to two concern areas, du
 
 The person can steer this. Asking for suggestions moves to `recommend` as soon as one concern is clear. Saying they only want to talk holds the assistant in `understand` for up to 10 turns, until they ask. Raising a new problem after the suggestions sends the conversation back to `understand` for that problem. If six turns pass without enough to go on, the assistant says so and shows two general starting points: self-care and a therapist.
 
-Which kinds of help to suggest comes from a rules table (`config/help-rules.json`) applied to the needs record, not from the model. The model then searches the catalogue and picks up to three therapist cards and two service cards from the results.
+Which kinds of help to suggest comes from a rules table (`config/help-rules.json`) applied to the needs record, not from the model. The model then searches the catalogue of kinds of help and picks up to three service cards from the results, each linking to a free public resource. It can't suggest a particular therapist: the catalogue holds no people, the only tool is the service search, and the output filter blocks any clinician's name.
+
+## case study: therapist matching
+
+Until 2026-11-14 the recommend step also matched the person to sample therapist profiles: 14 invented clinicians, filtered by help type, mode, city and language and ranked by concern overlap. That matching now lives only as a case study, outside the deployed app: the write-up is in [docs/case-studies/therapist-matching.md](docs/case-studies/therapist-matching.md), and the profiles, the matching code, its tests and the moved eval checks are in `case-studies/therapist-matching/`. A lint rule stops shipped code from importing that folder, and `scripts/check-bundle.mjs` fails the build if any sample name reaches the bundle.
 
 ## safety gates
 
@@ -66,7 +71,7 @@ Which kinds of help to suggest comes from a rules table (`config/help-rules.json
 | keyword floor | English and Hinglish patterns, each with a tier and exclusions for hard negatives ("this deadline is killing me"); runs first with no network | fires even when Jev reads `none` |
 | Jev risk | tier `none`, `elevated` or `imminent`, plus self-harm, harm to others and being harmed, on every user turn | an error or timeout counts as `elevated` (fail closed) |
 | handoff | `imminent` shows fixed text and crisis lines, 112 first; no model call and nothing about booking | `elevated` keeps a crisis line in every later recommendation |
-| output filter | code checks links against an allowlist, names against this turn's search results, length, and gendered Hinglish verbs; Jev checks diagnosis, medicine or dose advice, and claiming to be human | regenerates once with the problem named, then shows a fixed reply with a note saying a reply was held back |
+| output filter | code checks links against an allowlist, length and gendered Hinglish verbs, and blocks any clinician's name, since the catalogue names no one; Jev checks diagnosis, medicine or dose advice, and claiming to be human | regenerates once with the problem named, then shows a fixed reply with a note saying a reply was held back |
 | limits | 20 turns a conversation; 5 conversations a day and 30 turns an hour per IP and per reviewer; $5 a day in total spend | checked after both crisis checks, and never applied to a turn in `handoff` |
 
 Message text is stored only with opt-in consent and deleted after 30 days by a scheduled job (`supabase/migrations/`). The audit log holds gate results and token counts, never text. Emails and IPs are kept only as keyed hashes. Local runs never touch the deployed providers: outside production the chat goes only through the Claude or Grok CLI, and `scripts/check-bundle.mjs` fails the build if CLI code reaches the server bundle. Unit tests for the turn pipeline, limits, gates, reviewer sign-in and the transition rules are in `test/`.
@@ -96,6 +101,8 @@ Recommendation, 31 scripted conversations (19 English, 12 Hinglish) through the 
 | crisis line added where the script had no risk | 3 | 4 |
 | cards outside the catalogue, replies with links | 0, 0 | 0, 0 |
 | turns that fell back to a fixed reply | 1 (a CLI error) | 14 (13 CLI failures, 1 caught diagnosis) |
+
+These recommendation runs (2026-10-26) predate the move of therapist matching to a case study, so their recommend turns also showed sample therapist cards. The suite needs a re-run against the current app; the help types come from the rules table, which didn't change.
 
 The unasked-for crisis lines come from Jev reading severe low mood or skipped meals as elevated risk, which errs toward showing the numbers. The rules table adds a therapist to every recommendation by design, which is why the exact-match row ignores it. On the Grok CLI, 13 of the 14 fixed replies came from the CLI itself failing, mostly exiting with "max turns reached", and the app answered as it does when every provider is down. The 14th is the only rule break in any eval run: in `rec-hi-02` a Grok reply read as a diagnosis, and the output filter replaced it.
 
@@ -137,7 +144,8 @@ Locally, chat goes only through the Claude CLI (Haiku, the default) or the Grok 
 | `src/composition/index.ts` | wires adapters to ports; production and local wiring differ here |
 | `src/app/`, `src/components/` | Next.js routes (chat, `/join`, `/login`, `/evals`, `/api/*`) and the UI |
 | `config/` | thresholds, help rules, risk keywords, crisis lines, fixed replies, limits, prices, provider chain |
-| `catalogue/` | sample therapist profiles and linked Amaha services |
+| `catalogue/` | kinds of help, each linked to a free public resource |
+| `case-studies/therapist-matching/` | the therapist-matching case study: sample profiles, matching code, tests, moved eval checks; never shipped |
 | `evals/` | cases, runner, judge and results |
 | `supabase/migrations/` | tables, functions, row-level security and purge jobs |
 
@@ -147,7 +155,7 @@ No clinician has reviewed the rules table, the risk keywords or the thresholds; 
 
 The deployed chat chain (Gemini, then OpenRouter) is checked only by spot turns on the live site, since local evals run on the CLIs. In those spot checks Gemini also refused the diagnosis and dose pushes by itself, so the red team measures the models more than the gates; the reply-check suite measures the gates directly.
 
-It covers English and Hinglish in roman script, not Devanagari or other Indian languages, and its crisis lines are for India only. The spend counter prices Gemini's free tier at OpenRouter's list price, so the $5 cap trips early. There's no booking, no accounts and no memory across conversations. Amaha's real directory and booking would plug in behind the `Catalogue` port.
+It covers English and Hinglish in roman script, not Devanagari or other Indian languages, and its crisis lines are for India only. The spend counter prices Gemini's free tier at OpenRouter's list price, so the $5 cap trips early. There's no booking, no accounts and no memory across conversations. A real provider directory and booking would plug in behind the `Catalogue` port.
 
 ## license
 

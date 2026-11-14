@@ -19,7 +19,7 @@ describe("output filter", () => {
     expect(filterReply({ ...base, reply: "Try https://example.com/help" }).violation).toBe("link");
     expect(filterReply({ ...base, reply: "see betterhelp.com" }).violation).toBe("link");
     expect(
-      filterReply({ ...base, allowedUrls: new Set(["https://www.amahahealth.com/x"]), reply: "amahahealth.com/x" }).violation,
+      filterReply({ ...base, allowedUrls: new Set(["https://telemanas.mohfw.gov.in/home"]), reply: "telemanas.mohfw.gov.in/home" }).violation,
     ).toBeNull();
   });
 

@@ -1,6 +1,6 @@
 # Loom script: samatva-support
 
-A 2:40 walkthrough for Amaha's reviewers, following the Loom outline in `docs/spec.md` (deliverables, item 3). Draft for Lokesh to rehearse and trim; the spoken lines are a guide, not a script to read.
+A 2:40 video walkthrough of the demo, following the Loom outline in `docs/spec.md` (deliverables, item 3). Draft for Lokesh to rehearse and trim; the spoken lines are a guide, not a script to read.
 
 ## before recording
 
@@ -16,10 +16,10 @@ A 2:40 walkthrough for Amaha's reviewers, following the Loom outline in `docs/sp
 
 | time | on screen | say |
 |---|---|---|
-| 0:00 | The intake card: disclosure, 18+ box, consent box | Amaha asked for an agent that helps someone work out what kind of help they need. This one listens, decides which kind of help fits, and points to Amaha's services, with the safety decisions made in code, not left to the model. |
+| 0:00 | The intake card: disclosure, 18+ box, consent box | This is an agent that helps someone work out what kind of help they need. It listens, decides which kind of help fits, and points to free public resources, with the safety decisions made in code, not left to the model. |
 | 0:15 | Tick 18+, leave consent unticked, Start | It says up front it's an AI, not a clinician, and not an emergency service. Nothing is stored unless you opt in. |
 | 0:20 | Paste the three Hinglish turns; the stepper moves from Talk to Suggestions | A Hinglish conversation. Each turn, Jev, TypeSafe's decision model, fills a typed needs record; a rules table picks the kinds of help, and the chat model can only search inside those. |
-| 0:40 | The reply, help-type chips, therapist cards with "sample profile" | Cards come only from the catalogue, never from model text. The therapists are invented samples, labelled as such, linking to Amaha's real booking page. |
+| 0:40 | The reply, help-type chips, service cards linking to Tele-MANAS and the WHO | Cards come only from the catalogue, never from model text. It suggests kinds of help, never a particular therapist, and every link goes to a free public service, never a booking page. |
 | 0:50 | Start over. Paste the crisis line | Now a crisis message with no word on the keyword list, so it's Jev alone that has to catch it. |
 | 0:55 | The handoff panel, 112 first; expand Under the hood | It goes straight to the handoff: fixed text, crisis lines, no model call, no booking links. The trace shows the keyword floor said none and Jev said imminent; the stricter one wins. |
 | 1:05 | Start over. Paste the diagnosis push; the model declines; expand Under the hood | Push for a diagnosis. The model declines by itself, and the trace shows Jev's diagnosis check ran and passed. In testing, both models always refused, so the filter never had to catch one live. |
@@ -28,7 +28,7 @@ A 2:40 walkthrough for Amaha's reviewers, following the Loom outline in `docs/sp
 | 1:45 | Point at the ports row | Every outside service is an adapter behind a port: the chat chain is Gemini, then OpenRouter as fallback; locally it's the Claude or Grok CLI, so dev and evals never touch production keys. Limits never sit in front of the handoff. |
 | 1:55 | `/evals`, Risk gate table | Sixty risk cases in English and Hinglish: imminent recall 100% on the final gate. The keyword floor alone gets 40%, which is why Jev is there, and the floor is there in case Jev misses. |
 | 2:05 | Open "Where it falls short (2)", then Recommendation's list | Where it falls short: two Hinglish exaggerations read as elevated risk, which only adds crisis lines. In recommendations, three unasked-for crisis lines, and on Grok six stock-line fallbacks at the search cap. All cases are synthetic and mine, so these are smoke tests, not benchmarks. |
-| 2:20 | Back to the chat, or the README limitations | Next: Amaha's real directory and booking behind the catalogue port, more Indian languages, and a clinician reviewing the rules table and thresholds. |
+| 2:20 | Back to the chat, or the README limitations | Next: a real provider directory behind the catalogue port, more Indian languages, and a clinician reviewing the rules table and thresholds. |
 | 2:35 | End | Thanks. The link, the evals and the code are in the description. |
 
 ## notes

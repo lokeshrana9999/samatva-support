@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { config } from "@config";
-import { JsonCatalogue, services, therapists } from "@/adapters/catalogue/json";
+import { ALLOWED_ORIGINS, allowlisted, JsonCatalogue, services } from "@/adapters/catalogue/json";
+import { parseAction } from "@/core/action";
 import { compileFloor } from "@/core/gates/keyword-floor";
 import { EMPTY_NEEDS, enough, helpTypesFor, type NeedsRecord } from "@/core/needs";
 import type { Action } from "@/core/action";
@@ -96,25 +97,31 @@ describe("rules and the needs gate", () => {
 });
 
 describe("catalogue", () => {
-  it("links every card to an allowlisted Amaha page and marks therapists as samples", async () => {
+  it("links every card to an allowlisted public resource", async () => {
     const cat = new JsonCatalogue();
     const allowed = cat.allowedUrls();
-    const th = await cat.searchTherapists({ helpType: "therapist", concerns: ["stress_anxiety"], limit: 3 });
-    expect(th.length).toBe(3);
-    for (const c of th) {
-      expect(c.sample).toBe(true);
+    expect(services.every((s) => ALLOWED_ORIGINS.some((o) => s.url.startsWith(o)))).toBe(true);
+    for (const s of services) expect(allowed.has(s.url)).toBe(true);
+    const cards = await cat.searchServices({ helpTypes: ["therapist", "psychiatrist", "couples_therapist", "self_care"] });
+    expect(cards.length).toBe(services.length);
+    for (const c of cards) {
+      expect(c.kind).toBe("service");
       expect(allowed.has(c.url)).toBe(true);
     }
-    expect(services.every((s) => s.url.startsWith("https://www.amahahealth.com/"))).toBe(true);
-    expect(therapists.length).toBeGreaterThanOrEqual(10);
   });
 
-  it("prefers the requested language without leaving the person with nobody", async () => {
-    const cat = new JsonCatalogue();
-    const tamil = await cat.searchTherapists({ helpType: "psychiatrist", concerns: [], language: "tamil", limit: 3 });
-    expect(tamil.every((c) => c.languages.includes("Tamil"))).toBe(true);
-    const rare = await cat.searchTherapists({ helpType: "couples_therapist", concerns: [], language: "punjabi", limit: 3 });
-    expect(rare.length).toBeGreaterThan(0);
+  it("allowlists only public-resource origins, not lookalike hosts", () => {
+    expect(allowlisted("https://www.who.int/publications/i/item/9789240003927")).toBe(true);
+    expect(allowlisted("https://telemanas.mohfw.gov.in/home")).toBe(true);
+    expect(allowlisted("https://www.who.int.example.com/")).toBe(false);
+    expect(allowlisted("https://example.com/therapy")).toBe(false);
+  });
+
+  // Therapist profiles are a case study (docs/case-studies/therapist-matching.md).
+  it("holds kinds of help only, with no therapist search", () => {
+    const cat = new JsonCatalogue() as unknown as Record<string, unknown>;
+    expect(cat.searchTherapists).toBeUndefined();
+    expect(services.some((s) => /^t-\d+$/.test(s.id))).toBe(false);
   });
 });
 
@@ -127,46 +134,85 @@ describe("recommend stage", () => {
     expect(s.stage).toBe("understand");
   });
 
-  it("searches, shows the cards the model picked, and moves the session to close", async () => {
+  it("searches services, shows the cards the model picked, and moves the session to close", async () => {
     const chat = scripted([
-      { reply: "", tool: { name: "search_therapists", args: { helpType: "therapist", concerns: ["stress_anxiety"], limit: 3 } } },
       { reply: "", tool: { name: "search_services", args: { helpTypes: ["therapist"] } } },
-      { reply: "A therapist may help with the anxiety you've had for months. Ira Menon works with work stress.", show: ["t-01", "svc-therapy"] },
+      { reply: "A therapist may help with the anxiety you've had for months.", show: ["svc-find", "svc-therapy"] },
     ]);
     const { final, session: s, audit } = await runTurn(deps(chat, gate(needs())), { session: session(), messages: msgs("it's been months") });
     expect(final.stage).toBe("recommend");
     expect(final.helpTypes).toEqual(["A therapist"]);
-    expect(final.cards.map((c) => c.id)).toEqual(["t-01", "svc-therapy"]);
+    expect(final.cards.map((c) => c.id)).toEqual(["svc-find", "svc-therapy"]);
     expect(final.replaced).toBeNull();
     expect(s.stage).toBe("close");
-    expect(audit.tools).toEqual(["search_therapists", "search_services"]);
+    expect(audit.tools).toEqual(["search_services"]);
   });
 
   it("rejects a tool call for help the rules didn't pick", async () => {
     const chat = scripted([
-      { reply: "", tool: { name: "search_therapists", args: { helpType: "psychiatrist", concerns: [], limit: 3 } } },
+      { reply: "", tool: { name: "search_services", args: { helpTypes: ["psychiatrist"] } } },
       { reply: "A therapist may help.", show: [] },
     ]);
     const { final, audit } = await runTurn(deps(chat, gate(needs())), { session: session(), messages: msgs("ok") });
     expect(audit.toolRejected).toBe(true);
     expect(chat.seen[1]).toContain("rejected");
     // The model showed nothing valid, so the controller's own top results show.
-    expect(final.cards.length).toBeGreaterThan(0);
-    expect(final.cards.every((c) => c.kind === "service" || c.title !== "Psychiatrist")).toBe(true);
+    expect(final.cards.map((c) => c.id)).toEqual(["svc-therapy", "svc-find"]);
   });
 
-  it("blocks a reply naming a clinician who isn't on a shown card", async () => {
+  it("shows only service cards, at most three, and ignores ids it never returned", async () => {
+    const chat = scripted([
+      { reply: "", tool: { name: "search_services", args: { helpTypes: ["psychiatrist", "therapist"] } } },
+      { reply: "A psychiatrist and a therapist may both help.", show: ["t-01", "svc-psychiatry", "svc-therapy", "svc-find", "svc-psychiatry"] },
+    ]);
+    const severe = needs({ impact: { value: "severe", p: 0.9 } });
+    const { final } = await runTurn(deps(chat, gate(severe)), { session: session(), messages: msgs("ok") });
+    expect(final.cards.map((c) => c.id)).toEqual(["svc-psychiatry", "svc-therapy", "svc-find"]);
+    expect(final.cards.every((c) => c.kind === "service")).toBe(true);
+  });
+
+  // The therapist search is a case study (docs/case-studies/therapist-matching.md),
+  // so the parser no longer accepts it as a tool call.
+  it("doesn't accept a therapist search from the model", () => {
+    const r = parseAction('{"tool": {"name": "search_therapists", "args": {"helpType": "therapist"}}, "reply": ""}');
+    expect(r.ok).toBe(false);
+  });
+
+  it("tells the model it can't name a practitioner and offers no therapist search", async () => {
+    const chat = scripted([{ reply: "A therapist may help.", show: [] }]);
+    const seen: string[] = [];
+    const spy: ChatModel = {
+      async complete(req) {
+        seen.push(req.messages[0].content);
+        return chat.complete(req);
+      },
+    };
+    await runTurn(deps(spy, gate(needs())), { session: session(), messages: msgs("ok") });
+    expect(seen[0]).toContain("search_services");
+    expect(seen[0]).not.toMatch(/search_therapists|sample profile/i);
+    expect(seen[0]).toContain("never suggest a specific practitioner");
+  });
+
+  it("blocks a reply naming a clinician, since the catalogue names no one", async () => {
     const chat = scripted([{ reply: "You should see Dr. Mehta, she is great.", show: [] }]);
     const { final } = await runTurn(deps(chat, gate(needs())), { session: session(), messages: msgs("ok") });
     expect(final.replaced).toEqual({ reason: "name" });
     expect(final.cards.length).toBeGreaterThan(0);
+    expect(final.cards.every((c) => c.kind === "service")).toBe(true);
+  });
+
+  it("blocks a reply naming one of the case-study sample therapists", async () => {
+    const chat = scripted([{ reply: "Dr. Lata Krishnan speaks Tamil and could help.", show: [] }]);
+    const { final } = await runTurn(deps(chat, gate(needs())), { session: session(), messages: msgs("ok") });
+    expect(final.replaced).toEqual({ reason: "name" });
+    expect(final.reply).not.toContain("Krishnan");
   });
 
   it("adds the crisis line first when risk is elevated", async () => {
     const chat = scripted([{ reply: "A crisis line is there if things get worse, and a psychiatrist may help.", show: [] }]);
     const { final } = await runTurn(deps(chat, gate(needs())), { session: session({ riskFloor: "elevated" }), messages: msgs("ok") });
     expect(final.helpTypes[0]).toBe("A crisis line, now");
-    expect(final.cards.some((c) => c.title === "Psychiatrist")).toBe(true);
+    expect(final.cards.some((c) => c.id === "svc-psychiatry")).toBe(true);
   });
 
   it("answers briefly in close without new cards", async () => {

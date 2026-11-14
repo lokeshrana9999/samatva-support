@@ -13,7 +13,7 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "samatva support",
   description:
-    "An independent demo: a support assistant that helps you work out what kind of mental health help might fit. Not affiliated with Amaha.",
+    "An independent demo: a support assistant that helps you work out what kind of mental health help might fit, with safety gates that live in code.",
   robots: { index: false, follow: false },
 };
 

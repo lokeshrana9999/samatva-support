@@ -1,21 +1,21 @@
 # samatva-support: spec
 
 Date: 2026-10-25
-Status: approved by Lokesh on 2026-10-25; amended 2026-10-26 for reviewer access (decision 11). Supersedes the samatva-centred plan in `docs/handoff.md`. The full system and frontend design is `docs/design.md`.
+Status: approved by Lokesh on 2026-10-25; amended 2026-10-26 for reviewer access (decision 11). Amended 2026-11-14 to make the demo company-neutral (decision 2). Supersedes an earlier samatva-centred plan. The full system and frontend design is `docs/design.md`.
 
-A deployed support assistant for Amaha's AI Engineer build, option 1: "a conversational agent that helps someone figure out what kind of help they might need". It asks what is going on, works out which kind of help fits, and points to matching Amaha services and therapists. A controller in code owns the stages and the safety gates; the LLM phrases the conversation and calls catalogue search tools inside them; Jev (TypeSafe AI's decision model) makes the typed safety and routing decisions.
+A deployed support assistant built to the brief "a conversational agent that helps someone figure out what kind of help they might need". It asks what is going on, works out which kind of help fits, and points to matching kinds of help, each linked to a free public resource. It never suggests an individual therapist. A controller in code owns the stages and the safety gates; the LLM phrases the conversation and calls catalogue search tools inside them; Jev (TypeSafe AI's decision model) makes the typed safety and routing decisions.
 
 ## decisions
 
 | # | decision | reason |
 |---|---|---|
-| 1 | Build option 1, the support assistant | It answers the brief Amaha wrote, word for word, instead of asking reviewers to accept a reframe. |
-| 2 | Recommendations link to real Amaha service pages and show synthetic therapist profiles, each labelled "sample profile, not a real clinician" and linking to Amaha's real booking page for that kind of help (amended 2026-10-26; it replaces "real Amaha therapists by name") | Amaha's terms (updated 25 Jul 2025) forbid copying site content without written permission, and list scraping and collecting others' personal information as prohibited uses. Linking isn't restricted. Routing into Amaha's own services is still the realistic product; samatva's no-paid-referral rule was written for an open-source tool and doesn't apply here. |
-| 2a | Guards on the catalogue: cards show only catalogue fields, never model-written claims about a clinician; service summaries are our own words; nothing shows in a risk handoff (crisis lines only there); footer says "independent demo by Lokesh, not affiliated with Amaha" | The app must not invent credentials, pass off samples as real people, or route someone in crisis to a booking page. Amaha's real directory would plug in behind the `Catalogue` port. |
-| 3 | No samatva skills or ladder; the flow follows Amaha's brief | Stay close to what Amaha asked for. samatva is cited only as prior work on putting restraint in a controller. |
+| 1 | Build the support assistant | It answers the brief word for word, instead of asking reviewers to accept a reframe. |
+| 2 | Recommendations show generic kinds of help (therapy, psychiatry, couples therapy, self-care, peer support), each linked to a free public resource (Tele-MANAS or the World Health Organization), and never an individual therapist (amended 2026-11-14 twice: links to one company's service and booking pages became free public resources; then, at Lokesh's request, synthetic therapist profiles left the deployed app and became a case study, [docs/case-studies/therapist-matching.md](case-studies/therapist-matching.md)) | The demo is tied to no company, and public resources cost the person nothing. Summaries are our own words, nothing is copied from the linked sites, and no clinician, real or invented, is shown. samatva's no-paid-referral rule holds: nothing links to a paid service. The link allowlist in code keeps it that way. |
+| 2a | Guards on the catalogue: cards show only catalogue fields, never model-written claims about a clinician; service summaries are our own words; nothing shows in a risk handoff (crisis lines only there); footer says "independent demo by Lokesh" | The app must not invent credentials, pass off samples as real people, or route someone in crisis to a booking page. A real provider directory would plug in behind the `Catalogue` port. |
+| 3 | No samatva skills or ladder; the flow follows the brief | Stay close to the brief. samatva is cited only as prior work on putting restraint in a controller. |
 | 3a | Shape: a controller owns the stages and gates; inside them, the LLM converses and calls catalogue search tools | Covers what the role asks for (agents, tool-calling, retrieval, evals, safe by default), and the gates sit where the model can't talk its way past them. |
 | 4 | Risk gate: a Jev typed question on every user turn (tier `none`, `elevated` or `imminent`, plus yes/no for self-harm, harm to others, being harmed), thresholds in config, and an English plus Hinglish keyword floor that fires even when Jev says none | Jev returns calibrated choices, so the tier is a number the controller acts on, and the keyword floor still works if the model misses. |
-| 4a | Output filter: deterministic checks (link allowlist, every therapist or service name matches a tool result, length cap) plus Jev yes/no questions per reply (diagnosis? medical or medication advice? claims to be human?); regenerate once with the violation named, then fall back to a stock line | Exact checks are provable in evals; Jev covers the paraphrase cases a regex misses. |
+| 4a | Output filter: deterministic checks (link allowlist, no clinician name, since the catalogue names no one, length cap) plus Jev yes/no questions per reply (diagnosis? medical or medication advice? claims to be human?); regenerate once with the violation named, then fall back to a stock line | Exact checks are provable in evals; Jev covers the paraphrase cases a regex misses. |
 | 4b | Fail closed: if a Jev call errors or times out, the risk gate treats the turn as `elevated` and the filter blocks the reply | A safety gate that opens when its model is down isn't a gate. |
 | 5 | Next.js (App Router, TypeScript) on Vercel, one repo | Lokesh's stack; API routes keep every key server-side. |
 | 5a | Supabase Postgres holds sessions, a content-free audit log, rate-limit and spend counters, and opted-in transcripts. No Supabase Auth | One store for everything. Access is the reviewer login in decision 11, and limits apply per IP and per reviewer. |
@@ -24,13 +24,13 @@ A deployed support assistant for Amaha's AI Engineer build, option 1: "a convers
 | 5d | Outside production the chat model is a local CLI and nothing else: `LLM_LOCAL_CLI` picks `claude` (default) or `grok`, and no API provider is ever built. In production only the API chain exists; the production build excludes the CLIs. The provider keys in `.env` are for the deployed app alone, and local dev and evals never load them (tightened 2026-10-26, after the step 3 evals ran on the Google key) | Subscription CLIs are for Lokesh's own development and must never serve the public link, and production keys and quotas must never be spent from his machine. |
 | 5e | Tool calls are typed JSON actions (`{ reply, tool?: { name, args } }`) validated with zod, the same for every provider and CLI; the controller runs the tool and loops | One code path, so evals on the CLI test what ships, and the controller decides which tools each stage allows. |
 | 5f | Hexagonal layout: the core (controller, gates, policies) depends only on ports (`ChatModel`, `DecisionModel`, `Catalogue`, `AuditLog`, `TranscriptStore`, `RateLimiter`); each provider, Jev, and Supabase is an adapter | Swapping or removing a provider means adding or deleting one adapter, with no change to the core. |
-| 6 | English plus Hinglish in roman script in v1; replies mirror the user's language. Devanagari and other Indian languages are out | Amaha serves India. How well Jev reads Hinglish is unverified, and the eval set measures it. |
+| 6 | English plus Hinglish in roman script in v1; replies mirror the user's language. Devanagari and other Indian languages are out | The app is for adults in India. How well Jev reads Hinglish is unverified, and the eval set measures it. |
 | 7 | Crisis handoff shows 112 first, then Tele-MANAS, Vandrevala Foundation, and 181 (women's helpline) when the signal is being harmed at home. Each number is checked against its official source before deploy and stored in config with that URL and the check date | Government lines plus one 24x7 NGO line; numbers are never typed from memory. |
 | 8 | Three eval suites (risk, recommendation, red-team), about 100 synthetic cases in English and Hinglish, run locally against the Claude CLI and the Grok CLI only. The deployed chain is checked by spot turns on the live site, never by a local eval run. Results go in the README and on a read-only `/evals` page | Shows the gates hold and the recommendations are right, with numbers a reviewer can open. |
 | 8a | The rubric judge is the Claude CLI on Haiku, never Jev | The gate model never grades itself. |
 | 9 | Limits: 20 user turns per conversation, 1,000 characters per message, 5 conversations a day and 30 turns an hour per IP, and a $5/day global spend cap from token counts times a price table in config | A public link that calls paid APIs needs a hard ceiling. |
 | 9a | When a cap hits, the user sees "demo limit reached for today" and the crisis lines stay on screen; the keyword floor and the handoff never sit behind a cap | A limit must never block someone in danger from the numbers. |
-| 10 | Repo stays `samatva-support`, private on GitHub until submission, then public; MIT license | Lokesh's call on visibility; MIT is my default since no license was named. |
+| 10 | Repo stays `samatva-support`, private on GitHub until the first release, then public; MIT license | Lokesh's call on visibility; MIT is my default since no license was named. |
 | 10a | No timebox; work goes in the steps below, each ending deployed | Lokesh prefers to size as the build goes. |
 | 11 | Reviewer login: any email plus one shared access key that Lokesh hands out and can rotate; the email is kept only as a keyed hash. `/evals` and the crisis lines stay public | Added 2026-10-25 in the frontend interview: only reviewers reach the paid model calls, and rotating one key cuts everyone off. Details in `docs/design.md` (D1 to D6). |
 
@@ -42,7 +42,7 @@ In:
 - intake with identity disclosure (an AI, not a clinician, not an emergency service, an independent demo), an 18+ confirmation, and the transcript consent checkbox
 - the understand, recommend and close stages, plus the risk handoff from any stage
 - Jev risk gate with keyword floor; output filter; fail closed
-- a curated catalogue of Amaha services and named therapists, with search tools
+- a curated catalogue of kinds of help (linked to free public resources), with a search tool
 - provider chain (OpenRouter, Google AI Studio, Alibaba) and local CLI adapters (Claude, Grok)
 - Supabase: catalogue, audit log, limits, opted-in transcripts with 30-day purge and user delete
 - the three eval suites, README results, `/evals` page
@@ -50,7 +50,7 @@ In:
 Out of v1:
 
 - samatva's ladder (vent, label, distance) and its voice profiles
-- user accounts (beyond the shared reviewer key), booking, payments, or calls to any real Amaha API
+- user accounts (beyond the shared reviewer key), booking, payments, or calls to any real provider API
 - memory across conversations
 - Devanagari Hindi and other Indian languages; crisis lines outside India
 - users under 18
@@ -87,7 +87,7 @@ A finite state machine in code. The LLM never chooses the stage.
 |---|---|---|
 | `intake` | fixed disclosure text, 18+ and consent checkboxes, then one open question ("what's going on for you?") | first user message goes to `understand` |
 | `understand` | the LLM asks one open question per turn. Each turn, Jev fills a typed needs record: concern area, how long, effect on daily life, urgency, and preferences (language, online or in person, city) | Jev says the record is enough, or 6 assistant turns have passed: go to `recommend` |
-| `recommend` | a rules table in config maps the needs record to help types (eg `elevated` risk always adds a psychiatrist and a crisis line). The LLM calls `search_services` and `search_therapists` with filters, then explains the match in two or three sentences | the reply passes the filter and is shown with catalogue cards: go to `close` |
+| `recommend` | a rules table in config maps the needs record to help types (eg `elevated` risk always adds a psychiatrist and a crisis line). The LLM calls `search_services` with the help types the rules picked, then explains the match in two or three sentences | the reply passes the filter and is shown with catalogue cards: go to `close` |
 | `close` | the recommendation cards stay on screen, a "delete my conversation" button appears, and no question is asked back | further messages get short answers inside the same rules |
 | `handoff` | entered from any stage when the risk tier is `imminent`: one plain sentence, the crisis lines, nothing about catalogue or booking | stays in `handoff`; further messages get the crisis lines again and a question about whether they are safe right now |
 
@@ -96,17 +96,17 @@ Tools allowed per stage: none in `intake` and `understand`, the two search tools
 ### gates
 
 - Risk gate: runs before the controller on every user turn. The keyword floor runs first and needs no network. Jev gets the last user turns and the typed risk questions. The stricter result wins. `imminent` goes to `handoff`. `elevated` stays in the current stage but locks the recommendation to include a crisis line and urgent help, for the rest of the conversation.
-- Output filter: runs on every LLM reply before display. Deterministic: length cap per stage, links only from the allowlist (catalogue URLs plus crisis-line sources), every clinician or service name present in this turn's tool results. Jev: diagnosis, medical or medication advice, claiming to be human. On failure, regenerate once with the violation named; then show a stock line for that stage.
+- Output filter: runs on every LLM reply before display. Deterministic: length cap per stage, links only from the allowlist (catalogue URLs plus crisis-line sources), no clinician name (the catalogue names no one). Jev: diagnosis, medical or medication advice, claiming to be human. On failure, regenerate once with the violation named; then show a stock line for that stage.
 
 ### catalogue
 
-Six real Amaha service pages, linked with one-line summaries in our own words, and 14 synthetic therapist profiles (invented name, title, languages, specialties, modes, cities), each labelled as a sample and linking to Amaha's real booking page for its kind of help (decision 2). Nothing is copied from Amaha's site: its terms forbid it. URLs were checked on 2026-10-26.
+Six generic kinds of help, each linked to a free public resource (Tele-MANAS or the World Health Organization) with a one-line summary in our own words (decision 2). The 14 synthetic therapist profiles that sat beside them until 2026-11-14 are a case study now, outside the deployed app ([docs/case-studies/therapist-matching.md](case-studies/therapist-matching.md)). Nothing is copied from the linked sites. URLs were checked on 2026-11-14.
 
 ### storage
 
 | table | holds | never holds |
 |---|---|---|
-| `catalogue_services`, `catalogue_therapists` | public fields above | anything not on the public page |
+| `catalogue_services` | public fields above | anything not on the public page |
 | `audit_events` | time, anonymous session id, stage, gate outputs, filter violations, provider used, token counts | message text |
 | `limits` | per-IP and per-day counters, daily spend | IP addresses in plain text (store a salted hash) |
 | `transcripts` | messages, only with consent; `expires_at` 30 days out, purged by a scheduled job | anything from a session without consent |
@@ -135,13 +135,13 @@ Cases are synthetic, in English and Hinglish, stored as JSON under `evals/`. The
 ## deliverables
 
 1. Deployed link on Vercel.
-2. GitHub repo `samatva-support`, private until submission, then public, with the README covering what it does, the architecture, how to run evals, and the latest results.
+2. GitHub repo `samatva-support`, private until the first release, then public, with the README covering what it does, the architecture, how to run evals, and the latest results.
 3. A 2 to 3 minute Loom:
    - 0:00 to 0:20: the problem and what the assistant does
-   - 0:20 to 1:10: live demo: a Hinglish conversation to a recommendation with therapist cards, a crisis message to the handoff, a push for a diagnosis that the filter catches
+   - 0:20 to 1:10: live demo: a Hinglish conversation to a recommendation with service cards, a crisis message to the handoff, a push for a diagnosis that the filter catches
    - 1:10 to 1:50: architecture: controller, Jev gates, fail closed, provider chain, hexagonal ports
    - 1:50 to 2:20: the `/evals` numbers, including where it falls short
-   - 2:20 to 2:45: next: Amaha's booking API behind the `Catalogue` port, more languages, clinician review of the rules table
+   - 2:20 to 2:45: next: a real provider directory and booking behind the `Catalogue` port, more languages, clinician review of the rules table
 
 ## step plan
 
@@ -166,7 +166,7 @@ Each step ends deployed, with the evals that exist so far passing.
    - Not done: running the reversed option order (design D32), and recording Jev's latency on real traffic beyond these spot checks.
    - Seen live: asked for a diagnosis, Gemini refused it without the filter firing, but used feminine first-person verbs ("de sakti hoon") despite the prompt's no-gender rule. The filter doesn't check for gendered verbs yet; step 4 could add one.
 3. Catalogue: curate rows, Supabase tables, search tools, needs record, rules table, `understand` and `recommend`. Recommendation suite. Done and deployed 2026-10-26:
-   - Catalogue: six linked Amaha services and 14 sample therapists (decision 2), served from repo JSON, not Supabase (design D38).
+   - Catalogue: six linked services and 14 sample therapists (decision 2; relinked to free public resources on 2026-11-14, and the therapists moved to a case study the same day), served from repo JSON, not Supabase (design D38).
    - Needs record from Jev each understand turn, in parallel with the risk call; "enough" rule, rules table, tool loop narrowed to the picked help types; the session moves to close after recommending.
    - Recommendation suite on the Claude CLI: 24 of 24 reach recommend (2.1 turns on average) with the expected help types, 20 of 24 match exactly, 3 get an unasked-for crisis line, no stray cards or links, no stock fallbacks. Numbers are in the README.
    - Fixes this step turned up: Jev's medical-advice question flagged every recommendation, so it now covers medicines and doses only; tool calls without a `reply` were rejected; the CLI timeout was too short; Gemini answered English in Hinglish, so the controller now states the reply language in every prompt.
@@ -204,7 +204,7 @@ Each step ends deployed, with the evals that exist so far passing.
 ## open items
 
 - Jev's API shape, limits and Hinglish quality: settled. The API and limits come from TypeSafe's docs and console (`docs/design.md`), and Hinglish was measured by the step 2 risk suite: 100% imminent recall on 18 Hinglish cases.
-- Amaha's site terms: read on 2026-10-26. They forbid copying content, so the catalogue uses synthetic therapists and linked services (decision 2).
+- Linked sites: the catalogue links to free public resources and copies nothing from them; the app shows no clinicians, and the case study's therapists stay synthetic (decision 2).
 - Crisis numbers: verify each from its official source in step 1.
 - Model ids per provider: pick in step 1 and step 6 from each provider's current list.
-- `CLAUDE.md` says "synthetic data only". Real therapist profiles are public data, which Amaha's brief allows; conversations and eval data stay synthetic. Update that line when the spec is approved.
+- `CLAUDE.md` says "synthetic data only": the case study's therapist profiles, conversations and eval data all stay synthetic.

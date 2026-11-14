@@ -633,9 +633,9 @@ function Disclosure() {
       </p>
       <p>
         I&apos;ll ask a few questions about what&apos;s going on, then suggest kinds of help that may fit, with links to
-        Amaha services and sample therapist profiles. What you do next is up to you.
+        free public resources. I don&apos;t suggest individual therapists. What you do next is up to you.
       </p>
-      <p>This is an independent demo by Lokesh, not affiliated with Amaha.</p>
+      <p>This is an independent demo by Lokesh.</p>
     </div>
   );
 }

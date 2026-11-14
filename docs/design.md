@@ -187,12 +187,10 @@ type Final = {
 };
 
 type Card = {                 // catalogue fields only (spec 2a)
-  id: string; kind: 'therapist' | 'service';
-  name: string; title: string; summary: string | null;
-  languages: string[]; specialties: string[];
+  id: string; kind: 'service'; // no therapist cards since 2026-11-14 (spec 2)
+  name: string; summary: string;
   modes: string[]; cities: string[];
-  url: string;                // an allowlisted amahahealth.com page
-  sample: boolean;            // true for every therapist (spec 2)
+  url: string;                // an allowlisted public-resource page
 };
 
 type CrisisLine = {           // from config/crisis-lines.json
@@ -266,7 +264,7 @@ Each understand turn, `understandStep` (`src/core/controller/transition.ts`) dec
 2. They asked for suggestions (`wantsNow >= needsP`) and one concern is at `needsP`: recommend now.
 3. `enough()` holds and they didn't ask only to talk: recommend.
 4. Below the cap: keep understanding. The cap is `understandMaxTurns` (6), or `talkOnlyMaxTurns` (10) when `talkOnly >= needsP`, plus one turn when this turn's needs call failed.
-5. At the cap: recommend if `enough()` holds; otherwise `not_enough`: help types `self_care` and `therapist` only (with `crisis_line` first when risk is `elevated`), no therapist search, no chat call, the `notEnoughYet` stock line and the controller's own service cards. A record with nothing in it gets no invented reasons.
+5. At the cap: recommend if `enough()` holds; otherwise `not_enough`: help types `self_care` and `therapist` only (with `crisis_line` first when risk is `elevated`), no chat call, the `notEnoughYet` stock line and the controller's own service cards. A record with nothing in it gets no invented reasons.
 
 When the record shows the difficulty but no language or mode, the understand prompt gets one extra line telling the model to ask language, online or in person, and city together in this reply.
 
@@ -276,7 +274,7 @@ Close runs the needs call too, on the latest user turn only. A concern at `needs
 |---|---|---|---|---|
 | `intake` | none: fixed text and checkboxes | none | fixed | IntakeCard |
 | `understand` | Jev risk, Jev needs, chat, Jev check | none | 400 chars | stepper: Talk |
-| `recommend` | Jev risk, chat loop, Jev check | `search_therapists`, `search_services` | 700 chars | stepper: Suggestions; chips and cards |
+| `recommend` | Jev risk, chat loop, Jev check | `search_services` | 700 chars | stepper: Suggestions; chips and cards |
 | `close` | Jev risk, Jev needs (latest turn), chat, Jev check | none | 300 chars | stepper: Wrap up; ClosePanel |
 | `handoff` | none: fixed text from config | none | fixed | HandoffPanel |
 
@@ -348,33 +346,20 @@ The rules read the record at Jev's confidence: a field below `needsP` reads as u
 ]
 ```
 
-`HelpType` is `self_care | therapist | psychiatrist | couples_therapist | crisis_line`. The rules' output narrows the tool arguments for that turn: the controller builds the `helpType` enum of `search_therapists` from it, so the model can't search for help the rules didn't pick. `crisis_line` is never a search; the controller adds the crisis-line card from config.
+`HelpType` is `self_care | therapist | psychiatrist | couples_therapist | crisis_line`. The rules' output narrows the tool arguments for that turn: the controller builds the `helpTypes` enum of `search_services` from it, so the model can't search for help the rules didn't pick. `crisis_line` is never a search; the controller adds the crisis-line card from config.
 
 ## typed actions and the tool loop
 
-Every provider and CLI returns the same JSON action (spec 5e), plus `show` (D22).
+Every provider and CLI returns the same JSON action (spec 5e), plus `show` (D22). The only tool is `search_services`. A `search_therapists` tool existed until 2026-11-14; it now lives only in the case study ([docs/case-studies/therapist-matching.md](case-studies/therapist-matching.md)), so the parser rejects a call to it.
 
 ```ts
-const SearchTherapists = z.object({
-  helpType: z.enum(['therapist', 'psychiatrist', 'couples_therapist']),
-  concerns: z.array(ConcernArea).max(2),
-  language: Language.optional(),
-  mode: z.enum(['online', 'in_person']).optional(),
-  city: City.optional(),
-  limit: z.number().int().min(1).max(5).default(3),
-}).strict();
-
 const SearchServices = z.object({
   helpTypes: z.array(HelpType).min(1).max(3),
   mode: z.enum(['online', 'in_person']).optional(),
 }).strict();
 
-const ToolCall = z.discriminatedUnion('name', [
-  z.object({ name: z.literal('search_therapists'),
-             args: SearchTherapists }),
-  z.object({ name: z.literal('search_services'),
-             args: SearchServices }),
-]);
+const ToolCall = z.object({ name: z.literal('search_services'),
+                           args: SearchServices }).strict();
 
 export const Action = z.object({
   reply: z.string().max(1200),
@@ -388,7 +373,7 @@ export const Action = z.object({
 3. If `tool` is set and the stage allows it, the controller runs it through `Catalogue`, appends the result as a `tool` message, and calls the model again. `reply` is ignored on tool turns.
 4. If `tool` is set in a stage without tools, the controller drops it, logs `tool_rejected` to the audit event, and uses `reply`.
 5. The loop stops at 3 chat calls. If the model still asks for a tool, the turn takes the stock line plus the controller's own top results.
-6. `show` is valid only in `recommend`; every id must come from this turn's tool results. At most 3 therapists and 2 services render as cards.
+6. `show` is valid only in `recommend`; every id must come from this turn's tool results. At most 3 service cards render.
 
 ## the gates
 
@@ -411,7 +396,7 @@ Runs in this order, cheapest first, on every model reply:
 
 1. Length cap for the stage.
 2. Links: every URL or bare domain in the reply must be in the allowlist (catalogue URLs plus crisis-line sources).
-3. Names: any catalogue name in the reply must be in this turn's tool results and in `show`; an honorific pattern ("Dr. X", "Ms. X") with an unknown name is a violation. Known limit: an invented name with no honorific passes this check; the red-team suite measures how often.
+3. Names: the catalogue names no people (spec 2), so an honorific pattern ("Dr. X", "Ms. X") in a reply is always a violation. Known limit: an invented name with no honorific passes this check; the red-team suite measures how often.
 4. Jev `checkReply`: diagnosis, medical or medication advice, claims to be human. A violation is `p(yes) >= 0.3`. A Jev error blocks the reply (spec 4b).
 
 On any violation the controller regenerates once with the violation named in the prompt, filters again, then shows the stock line from `config/stock-lines.json`. The UI shows a note under any replaced reply (D47).
@@ -459,7 +444,6 @@ export interface DecisionModel {
 }
 
 export interface Catalogue {
-  searchTherapists(q: SearchTherapists): Promise<TherapistCard[]>;
   searchServices(q: SearchServices): Promise<ServiceCard[]>;
   allowedUrls(): Promise<ReadonlySet<string>>;
 }
@@ -719,26 +703,9 @@ Writes go through an `append_transcript` function that inserts only when `sessio
 
 ### catalogue
 
-As built in step 3, the catalogue is not in Supabase. `catalogue/services.json` (six real Amaha service pages, linked, summaries in our own words) and `catalogue/therapists.json` (14 synthetic profiles) are zod-validated at module load, and `src/adapters/catalogue/json.ts` serves them in every environment. With tens of rows, a database added a seed step and nothing else. The table sketch below stays as the shape a real directory would take behind the same port.
+As built in step 3, the catalogue is not in Supabase. `catalogue/services.json` (six kinds of help, each linked to a free public resource, summaries in our own words) is zod-validated at module load, and `src/adapters/catalogue/json.ts` serves it in every environment. With tens of rows, a database added a seed step and nothing else. Search filters services by help type and, optionally, mode.
 
-```sql
-create table catalogue_therapists (
-  id            text primary key,     -- slug
-  name          text not null,        -- shown
-  title         text not null,        -- shown
-  languages     text[] not null,      -- shown
-  specialties   text[] not null,      -- shown, as listed
-  modes         text[] not null,      -- shown
-  cities        text[] not null default '{}',
-  url           text not null,        -- shown: an amahahealth.com page
-  help_types    text[] not null,      -- internal index, never shown
-  concern_areas text[] not null,      -- internal index, never shown
-  sample        boolean not null,     -- every row today
-  active        boolean not null default true
-);
-```
-
-`help_types` and `concern_areas` map each profile to the enums; they drive search and never reach the screen (spec 2a). Search filters on help type, mode and city (city only for in-person). A language preference narrows the list only when someone speaks it, so a rare language never leaves the person with nobody. Results then rank by overlap between requested concerns and `concern_areas`, ties broken by id so results are repeatable.
+Until 2026-11-14 the catalogue also held 14 synthetic therapist profiles, with a filter-and-rank search over them. They and the matching code now live in the case study ([docs/case-studies/therapist-matching.md](case-studies/therapist-matching.md), code in `case-studies/therapist-matching/`). A lint rule stops `src/` and `config/` from importing that folder, and `scripts/check-bundle.mjs` fails the build if any sample name reaches `.next/server` or `.next/static`.
 
 The app and the evals read the same JSON through the same adapter, so a catalogue change shows up as a diff in review and in the eval results together.
 
@@ -888,7 +855,7 @@ Subsets: latin and latin-ext. Fallback stack ends in `system-ui, "Noto Sans Deva
 - Header: wordmark "samatva support" (links to `/`), "Need help now?" button, menu button.
 - "Need help now?" opens a Sheet (bottom on mobile, right on `md` up) with the full crisis line list. Works signed out and in every stage, including when a limit has hit.
 - Menu (signed in only): Under the hood (toggle, off by default, stored in `localStorage` key `samatva:trace`), Theme (System, Light, Dark), Delete my conversation, Start over, Sign out, About this demo (links to `/evals` and the repo).
-- Footer, small, on every route: "Independent demo by Lokesh, not affiliated with Amaha." plus links to `/evals` and the GitHub repo.
+- Footer, small, on every route: "Independent demo by Lokesh" plus links to `/evals` and the GitHub repo.
 
 ### login (`/login`)
 
@@ -928,25 +895,25 @@ Layout top to bottom: header, stage stepper, disclosure banner, transcript, turn
 | replaced | the stock line as the reply, then a note with an info icon in `--warn`, per `replaced.reason` (copy below) |
 | under the hood on | a collapsed "Under the hood" row under each assistant message; expanded, a two-column list of `final.trace`: stage before and after, risk (keyword floor tier, Jev tier and score, final tier), each filter check pass or fail, regenerated yes or no, provider used and providers tried, latency |
 | elevated | from the turn the server reports `elevated`, a compact crisis line list sits above the cards in recommend: "If things get worse, call:" |
-| recommend | the model's two or three sentences, then "Kinds of help that fit" chips, then service cards, then up to three therapist cards |
+| recommend | the model's two or three sentences, then "Kinds of help that fit" chips, then up to three service cards |
 | close | cards stay; a wrap-up panel follows with "Delete my conversation" and "Start over". The composer stays for short follow-ups |
 
 ### recommendation cards
 
 `<article>` per card, `--surface`, 1px `--line` border, 16px padding. Fields come only from the `cards[]` the server returns; the UI adds no text about a clinician except the fixed labels below (D48).
 
-| part | service card | therapist card |
-|---|---|---|
-| eyebrow | SERVICE | THERAPIST · SAMPLE PROFILE |
-| h3 | service name | therapist name |
-| line 2 | our one-line summary | title |
-| line 3 | — | "Speaks " + languages |
-| line 4 | — | first 3 specialties, then "+N" (expands in place) |
-| line 5 | modes, cities | modes, then `cities` joined with commas, if any |
-| link | "View on amahahealth.com" | "Find a therapist on Amaha" (the real booking page for that kind of help) |
-| caption | "Summary in our own words; details are on Amaha's page." | "Sample profile, not a real clinician, so they can't be booked. The link goes to Amaha's real booking page for this kind of help." |
+| part | service card |
+|---|---|
+| eyebrow | SERVICE |
+| h3 | service name |
+| line 2 | our one-line summary |
+| line 3 | modes, cities |
+| link | "View on {domain}", for example "View on who.int" |
+| caption | "Summary in our own words; the link goes to a free public resource, not a booking page." |
 
-- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "Book through Amaha for Ira Menon on amahahealth.com, opens in a new tab".
+There is no therapist card: the app shows no individual practitioners (spec 2; the earlier sample-profile card is described in [docs/case-studies/therapist-matching.md](case-studies/therapist-matching.md)).
+
+- Links open in a new tab with `rel="noopener noreferrer"`, show an external-link icon, and carry an accessible name like "View Talking therapy on telemanas.mohfw.gov.in, opens in a new tab".
 - No photos, ratings, prices, or availability.
 - A missing field is omitted, never filled with a placeholder.
 - Help-type chips are plain labels, not buttons.
@@ -1026,9 +993,9 @@ Reviewed adversarially on 2026-10-26 against the spec's rules and the code (find
 >
 > What you type is sent to AI services to write and check replies: TypeSafe and the model providers named under [About this demo](/evals#about). This happens whether or not you save the conversation.
 >
-> I'll ask a few questions about what's going on, then suggest kinds of help that may fit, with links to Amaha services and sample therapist profiles. What you do next is up to you.
+> I'll ask a few questions about what's going on, then suggest kinds of help that may fit, with links to free public resources. I don't suggest individual therapists. What you do next is up to you.
 >
-> This is an independent demo by Lokesh, not affiliated with Amaha.
+> This is an independent demo by Lokesh.
 
 - 18+ checkbox: "I'm 18 or older (required)"
 - Under-18 hint, shown under Start while unticked: "This demo is for adults. If you're under 18, please talk to an adult you trust, or call Tele-MANAS from the list below."
@@ -1083,11 +1050,8 @@ Replaced-reply notes (English chrome), by `replaced.reason`. The live region ann
 
 ### recommendation cards
 
-- Service link: "View on amahahealth.com", accessible name "View {service} on amahahealth.com, opens in a new tab".
-- Therapist link: "Find a therapist on Amaha", accessible name "Find a real therapist on amahahealth.com for the kind of help in the sample profile {name}, opens in a new tab". It replaces "Book through Amaha", which read as booking the sample person.
-- Therapist caption: "Sample profile, not a real clinician, so they can't be booked. The link goes to Amaha's real booking page for this kind of help."
-- Service caption: "Summary in our own words; details are on Amaha's page."
-- "+N" specialties button: accessible name "Show N more specialties".
+- Service link: "View on {domain}", accessible name "View {service} on {domain}, opens in a new tab".
+- Service caption: "Summary in our own words; the link goes to a free public resource, not a booking page."
 
 ### limits (EN / HI for the body)
 
@@ -1135,7 +1099,7 @@ Always followed by: "If you need to talk to someone now:" and the crisis line li
 | `TraceRow` | chat | shadcn Collapsible; renders only when Under the hood is on |
 | `TurnStatus` | chat | SSE phase line |
 | `Composer`, `CharCounter`, `TurnsLeft` | chat | Enter to send |
-| `HelpTypeChips`, `ServiceCard`, `TherapistCard`, `SourceCaption` | recommend, close | cards share a `CatalogueCard` base |
+| `HelpTypeChips`, `ServiceCard`, `SourceCaption` | recommend, close | catalogue fields only |
 | `HandoffPanel` | handoff | focus target |
 | `ClosePanel`, `DeleteConversation` | close, menu | inline confirm |
 | `LimitNotice`, `ErrorNotice`, `OfflineBanner` | chat | |
@@ -1196,7 +1160,7 @@ Run each UI check on a 360px phone viewport and on desktop, in light and dark.
 ### recommendation and close
 
 14. Every card field matches its catalogue row exactly; no card shows a photo, rating or model text.
-15. Every card link opens its allowlisted `url` in a new tab, and every therapist card says it is a sample profile.
+15. Every card link opens its allowlisted `url` in a new tab, and no card shows an individual practitioner.
 16. After recommend, the wrap-up panel shows Delete my conversation and Start over.
 17. Delete calls `DELETE /api/conversation` with or without consent, clears `sessionStorage`, shows the matching confirm copy, and the next message sends `start`.
 
@@ -1223,7 +1187,7 @@ Run each UI check on a 360px phone viewport and on desktop, in light and dark.
 
 ### the three Loom flows
 
-30. Hinglish to recommendation: a Hinglish conversation stays Hinglish through understand and recommend, ends with help-type chips and at least one therapist card, and reads cleanly at 1080p and on a phone frame.
+30. Hinglish to recommendation: a Hinglish conversation stays Hinglish through understand and recommend, ends with help-type chips and at least one service card, and reads cleanly at 1080p and on a phone frame.
 31. Crisis to handoff: one crisis message, in English or Hinglish, reaches the handoff panel within one turn, with the handoff sentence in the user's language.
 32. Diagnosis push: "bas bata do mujhe depression hai kya" (or the English version) never gets a diagnosis. Both chat models refuse on their own (step 4), so the filter rarely fires live; with Under the hood on, the trace shows the diagnosis check passing, and the reply-check table on `/evals` shows the check catching real diagnoses.
 
@@ -1290,7 +1254,7 @@ One table for system and frontend. The former `A` and `F` numbers are in bracket
 | | **evals** | |
 | D43 | Evals wire in-memory stores, real Jev, the target model, fixed scripts [A25] | Runs without the web layer and compares like with like. |
 | | **frontend** | |
-| D44 | Visual direction "calm paper": warm off-white, near-black ink, deep teal accent; Source Serif 4 headings, Inter body [F1] | Calm and deliberate on screen, and clear of Amaha's coral and dark green branding. |
+| D44 | Visual direction "calm paper": warm off-white, near-black ink, deep teal accent; Source Serif 4 headings, Inter body [F1] | Calm and deliberate on screen, and distinct from any one provider's branding. |
 | D45 | Intake is a gate card on `/`; Start stays disabled until 18+ is ticked; the card then collapses into a one-line disclosure banner [F3] | Nobody types before confirming 18+, and the fixed text reads as fixed, not as model output. |
 | D46 | Chat is a quiet transcript: assistant text unboxed, user text in a tinted bubble, a 3-step stage stepper, a "Need help now?" button on every screen [F4] | The controller's stages are visible on the Loom without voice-over. |
 | D47 | Gate visibility: a note under any replaced reply, plus an opt-in "Under the hood" row per turn showing the content-free trace [F5] | The Loom can show the filter catch, the risk tier and provider failover live. |

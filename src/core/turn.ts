@@ -24,7 +24,6 @@ import { assessRisk, type RiskResult } from "./gates/risk";
 import { closePrompt, languageLine, languageRules, recommendPrompt, regeneratePrompt, understandPrompt } from "./controller/prompts";
 import { understandStep } from "./controller/transition";
 import {
-  ConcernArea,
   EMPTY_NEEDS,
   HELP_TYPE_LABEL,
   helpTypesFor,
@@ -76,26 +75,19 @@ export function crisisLinesFor(config: Config, beingHarmed: boolean): CrisisLine
 type Check = { violation: ReplacedReason | null; checks: { name: string; pass: boolean }[] };
 type ReplyStage = "understand" | "recommend" | "close";
 
-const THERAPIST_TYPES = ["therapist", "psychiatrist", "couples_therapist"] as const;
-type TherapistType = (typeof THERAPIST_TYPES)[number];
+// At most this many service cards show on a recommend turn: one per help
+// type the rules can pick (they cap the list at 3).
+const MAX_CARDS = 3;
 
 // Tool arguments are validated here, in the core, against what the rules
-// picked this turn (D25). Anything else is rejected and logged.
-function toolSchemas(therapistTypes: TherapistType[], serviceTypes: HelpType[]) {
-  return {
-    search_therapists: z.strictObject({
-      helpType: z.enum(therapistTypes.length ? (therapistTypes as [TherapistType, ...TherapistType[]]) : ["therapist"]),
-      concerns: z.array(ConcernArea).max(2).default([]),
-      language: z.string().max(20).optional(),
-      mode: z.enum(["online", "in_person"]).optional(),
-      city: z.string().max(20).optional(),
-      limit: z.number().int().min(1).max(3).default(3),
-    }),
-    search_services: z.strictObject({
-      helpTypes: z.array(z.enum(serviceTypes as [HelpType, ...HelpType[]])).min(1).max(3),
-      mode: z.enum(["online", "in_person"]).optional(),
-    }),
-  };
+// picked this turn (D25). Anything else is rejected and logged. The only tool
+// is the service search: the deployed app has no therapist search
+// (docs/case-studies/therapist-matching.md).
+function serviceSchema(serviceTypes: HelpType[]) {
+  return z.strictObject({
+    helpTypes: z.array(z.enum(serviceTypes as [HelpType, ...HelpType[]])).min(1).max(3),
+    mode: z.enum(["online", "in_person"]).optional(),
+  });
 }
 
 // Only what Jev holds at `needsP` or above, so the model doesn't explain a
@@ -317,8 +309,11 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   };
 
   // Cheapest first: the exact checks, then Jev. A Jev error blocks the reply
-  // rather than letting it through unchecked (spec 4b).
-  const check = async (reply: string, knownNames: Set<string>): Promise<Check> => {
+  // rather than letting it through unchecked (spec 4b). No person's name is
+  // ever known: the catalogue holds kinds of help, not clinicians, so any
+  // "Dr. X" in a reply is blocked.
+  const knownNames: ReadonlySet<string> = new Set();
+  const check = async (reply: string): Promise<Check> => {
     deps.emit("checking");
     const exact = filterReply({ reply, lengthCap: cap, allowedUrls, knownNames });
     if (exact.violation) return exact;
@@ -340,43 +335,32 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
   };
 
   // Recommend-only state: what the rules picked and what the tools returned.
-  // At the cap without enough to go on: general help only, no therapist
-  // search, and the crisis line still first when risk is elevated.
+  // At the cap without enough to go on: general help only, and the crisis
+  // line still first when risk is elevated.
   const needs = s.needs ?? EMPTY_NEEDS;
   const general: HelpType[] = tier === "elevated" ? ["crisis_line", "self_care", "therapist"] : ["self_care", "therapist"];
   const helpTypes = stage !== "recommend" ? [] : notEnough ? general : helpTypesFor(config.helpRules, needs, tier, t);
-  const therapistTypes = notEnough ? [] : helpTypes.filter((h): h is TherapistType => (THERAPIST_TYPES as readonly string[]).includes(h));
   const serviceTypes = helpTypes.filter((h) => h !== "crisis_line");
   const results = new Map<string, Card>();
 
   // The controller's own pick, used when the model searches for nothing or
   // shows ids it never got back.
   const defaultCards = async (): Promise<Card[]> => {
-    const k = (f: Field) => known(f, t.needsP);
-    const concerns = needs.concerns.filter((c) => c.p >= t.needsP).map((c) => c.area);
-    const mode = k(needs.mode) && (needs.mode.value === "online" || needs.mode.value === "in_person") ? needs.mode.value : undefined;
-    const language = k(needs.language) ? needs.language.value : undefined;
-    const city = k(needs.city) ? needs.city.value : undefined;
-    const th: Card[] = [];
-    for (const h of therapistTypes) {
-      th.push(...(await deps.catalogue.searchTherapists({ helpType: h, concerns, language, mode, city, limit: therapistTypes.length > 1 ? 2 : 3 })));
-    }
     const sv = serviceTypes.length ? await deps.catalogue.searchServices({ helpTypes: serviceTypes }) : [];
-    for (const c of [...th, ...sv]) results.set(c.id, c);
-    return [...th.slice(0, 3), ...sv.slice(0, 2)];
+    for (const c of sv) results.set(c.id, c);
+    return sv.slice(0, MAX_CARDS);
   };
 
-  const pickCards = (show: string[] | undefined): Card[] => {
-    const shown = (show ?? []).map((id) => results.get(id)).filter((c): c is Card => !!c);
-    const th = shown.filter((c) => c.kind === "therapist").slice(0, 3);
-    const sv = shown.filter((c) => c.kind === "service").slice(0, 2);
-    return [...th, ...sv];
-  };
+  const pickCards = (show: string[] | undefined): Card[] =>
+    [...new Set(show ?? [])]
+      .map((id) => results.get(id))
+      .filter((c): c is Card => !!c)
+      .slice(0, MAX_CARDS);
 
   // The tool loop: at most `toolLoopMaxCalls` chat calls (design, typed
   // actions). Returns the final reply text and the cards it shows.
   const recommendLoop = async (base: ChatMsg[]): Promise<{ reply: string; cards: Card[] }> => {
-    const schemas = toolSchemas(therapistTypes, serviceTypes.length ? serviceTypes : ["therapist"]);
+    const schema = serviceSchema(serviceTypes.length ? serviceTypes : ["therapist"]);
     const msgs = [...base];
     for (let i = 0; i < t.toolLoopMaxCalls; i++) {
       const action = await ask(msgs);
@@ -386,21 +370,17 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
         return { reply: action.reply.trim(), cards };
       }
       msgs.push({ role: "assistant", content: JSON.stringify(action) });
-      const schema = schemas[action.tool.name];
       const args = schema.safeParse(action.tool.args);
-      if (!args.success || (action.tool.name === "search_therapists" && therapistTypes.length === 0)) {
+      if (!args.success) {
         toolRejected = true;
         msgs.push({ role: "user", content: `Tool call rejected: those arguments aren't allowed this turn. Use only the help types listed.` });
         continue;
       }
       deps.emit("searching");
       tools.push(action.tool.name);
-      const found =
-        action.tool.name === "search_therapists"
-          ? await deps.catalogue.searchTherapists(args.data as z.infer<typeof schemas.search_therapists>)
-          : await deps.catalogue.searchServices(args.data as z.infer<typeof schemas.search_services>);
+      const found = await deps.catalogue.searchServices(args.data);
       for (const c of found) results.set(c.id, c);
-      const brief = found.map((c) => ({ id: c.id, name: c.name, title: c.title, languages: c.languages, specialties: c.specialties, modes: c.modes, cities: c.cities }));
+      const brief = found.map((c) => ({ id: c.id, name: c.name, summary: c.summary, modes: c.modes }));
       msgs.push({ role: "user", content: `Tool result (${action.tool.name}): ${JSON.stringify(brief)}` });
     }
     // Still asking for tools at the cap: the stock line plus the controller's
@@ -416,7 +396,6 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
             lengthCap: cap,
             needs: needsSummary(needs, t.needsP),
             helpTypes: helpTypes.map((h) => h),
-            therapistTypes,
           })
         : closePrompt(cap);
   const system = `${languageRules(lang)}\n\n${stagePrompt}\n\n${languageLine(lang)}`;
@@ -448,8 +427,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
 
   try {
     const first = await produce(base);
-    const names = new Set(first.cards.filter((c) => c.kind === "therapist").map((c) => c.name));
-    const firstCheck = await check(first.reply, names);
+    const firstCheck = await check(first.reply);
     checks = firstCheck.checks;
     if (!firstCheck.violation) return done(first.reply, first.cards, null, "ok");
     violations.push(firstCheck.violation);
@@ -463,8 +441,7 @@ export async function runTurn(deps: TurnDeps, input: TurnInput): Promise<TurnOut
       { role: "assistant", content: JSON.stringify({ reply: first.reply }) },
       { role: "user", content: regeneratePrompt(firstCheck.violation) },
     ]);
-    const secondNames = new Set(second.cards.filter((c) => c.kind === "therapist").map((c) => c.name));
-    const secondCheck = await check(second.reply, secondNames);
+    const secondCheck = await check(second.reply);
     checks = secondCheck.checks;
     if (!secondCheck.violation) return done(second.reply, second.cards, null, "ok");
     violations.push(secondCheck.violation);
